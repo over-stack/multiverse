@@ -13,12 +13,12 @@ resources_dir = 'resources/gothicvania patreon collection/'
 
 anim = AnimationManager()
 
-anim.create(name='idle', filename=resources_dir + 'Gothic-hero-Files/PNG/gothic-hero-idle.png',
+anim.create(name='stay', filename=resources_dir + 'Gothic-hero-Files/PNG/gothic-hero-idle.png',
             cols=4, rows=1, count=4, speed=0.5)
 anim.create(name='attack', filename=resources_dir + 'Gothic-hero-Files/PNG/gothic-hero-attack.png',
             cols=6, rows=1, count=6, speed=0.5)
 
-ent = Entity(animanager=anim, x=50, y=50, speed=5, health=100, strength=10)
+ent = Entity(animanager=anim, position=[50, 50], speed=5, health=100, strength=10)
 
 Clock = pygame.time.Clock()
 
@@ -33,29 +33,11 @@ while run:
         if event.type == pygame.QUIT:
             run = False
 
-    ent.animanager.set('idle') # default animation for ent
+    ent.animanager.set('stay') # default animation for ent
 
     keys = pygame.key.get_pressed()
 
-    if keys[pygame.K_a]:
-        ent.move_x(-time)
-
-        ent.animanager.flip(True)
-
-    if keys[pygame.K_d]:
-        ent.move_x(time)
-
-        ent.animanager.flip(False)
-
-    if keys[pygame.K_w]:
-        ent.move_y(-time)
-
-    if keys[pygame.K_s]:
-        ent.move_y(+time)
-
-    if keys[pygame.K_SPACE]:
-        anim.set('attack')
-
+    ent.control(keys)
     ent.update(time)
 
     pygame.display.update()
