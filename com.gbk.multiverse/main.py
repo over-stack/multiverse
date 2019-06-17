@@ -11,14 +11,25 @@ fps = 60
 
 resources_dir = 'resources/gothicvania patreon collection/'
 
-anim = AnimationManager()
+anim_hero = AnimationManager()
 
-anim.create(name='stay', filename=resources_dir + 'Gothic-hero-Files/PNG/gothic-hero-idle.png',
+anim_hero.create(name='stay', filename=resources_dir + 'Gothic-hero-Files/PNG/gothic-hero-idle.png',
             cols=4, rows=1, count=4, speed=0.5)
-anim.create(name='attack', filename=resources_dir + 'Gothic-hero-Files/PNG/gothic-hero-attack.png',
+anim_hero.create(name='attack', filename=resources_dir + 'Gothic-hero-Files/PNG/gothic-hero-attack.png',
             cols=6, rows=1, count=6, speed=0.5)
+anim_hero.create(name='walk', filename=resources_dir + 'Gothic-hero-Files/PNG/gothic-hero-run.png',
+            cols=12, rows=1, count=12, speed=0.5)
 
-ent = Entity(animanager=anim, position=[50, 50], speed=5, health=100, strength=10)
+hero = Entity(animanager=anim_hero, position=[50, 50], speed=5, health=100, strength=10)
+
+anim_dog = AnimationManager()
+
+anim_dog.create(name='stay', filename=resources_dir + 'Hell-Hound-Files/PNG/hell-hound-idle.png',
+            cols=6, rows=1, count=6, speed=0.5)
+anim_dog.create(name='walk', filename=resources_dir + 'Hell-Hound-Files/PNG/hell-hound-walk.png',
+            cols=12, rows=1, count=12, speed=0.5)
+
+dog = Entity(animanager=anim_dog, position=[200, 200], speed=7, health=80, strength=14)
 
 Clock = pygame.time.Clock()
 
@@ -33,16 +44,24 @@ while run:
         if event.type == pygame.QUIT:
             run = False
 
-    ent.animanager.set('stay') # default animation for ent
-
     keys = pygame.key.get_pressed()
 
-    ent.control(keys)
-    ent.update(time)
+    ####### CONTROLS #######
+    hero.control(keys)
+
+    ####### COLLISION ######
+    hero.check_collision([dog])
+
+    ####### UPDATES ########
+    hero.update(time)
+    dog.update(time)
 
     pygame.display.update()
 
-    window.fill((0, 0, 0))
-    ent.draw(window)
+    window.fill((0, 0, 0)) # Makes black window
+
+    ####### DRAW #########
+    hero.draw(window)
+    dog.draw(window)
 
 pygame.quit()

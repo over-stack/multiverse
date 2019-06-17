@@ -8,6 +8,9 @@ class Object:
         self.position = position
         self.collision = True
 
+        self.width = list(self.animanager.animations.values())[0].width
+        self.height = list(self.animanager.animations.values())[0].height
+
     def update(self, time):
         self.animanager.tick(time)
 

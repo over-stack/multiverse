@@ -16,7 +16,7 @@ class Animation:
         self.height = self.rect.height / rows
 
         self.frames = [(index % cols * self.width, index // cols * self.height, self.width, self.height)
-                       for index in range(self.count)]
+                       for index in range(self.count)] # rects
 
         self.center = (-self.width / 2, -self.height / 2)
 
