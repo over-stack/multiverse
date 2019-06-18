@@ -53,10 +53,18 @@ class Entity(Object):
 
     # Do after control and before update
     def check_collision(self, objects):
+
+        if not self.collision:
+            return
+
         rect = pygame.Rect(self.position[0] - self.width / 2, self.position[1] - self.height / 2,
                            self.width, self.height)
 
         for object in objects:
+
+            if not object.collision:
+                continue
+
             obj_rect = pygame.Rect(object.position[0] - object.width / 2, object.position[1] - object.height / 2,
                                    object.width, object.height)
 
@@ -93,6 +101,3 @@ class Entity(Object):
 
         self.position[0] += self.acceleration[0] * time
         self.position[1] += self.acceleration[1] * time
-
-    def draw(self, surface):
-        self.animanager.draw(surface, self.position)

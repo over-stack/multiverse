@@ -1,4 +1,4 @@
-import pygame
+from pygame import transform
 from animation import Animation
 
 class AnimationManager:
@@ -16,14 +16,14 @@ class AnimationManager:
         anim = self.animations[self.currentAnimation]
 
         if self.flipped:
-            surface.blit(pygame.transform.flip(anim.sheet, True, False),
-                     (position[0] + anim.center[0],
-                      position[1] + anim.center[1]),
+            surface.blit(transform.flip(anim.sheet, True, False),
+                     (position[0] - anim.center[0],
+                      position[1] - anim.center[1]),
                     anim.frames[int(anim.currentFrame)])
         else:
             surface.blit(anim.sheet,
-                         (position[0] + anim.center[0],
-                          position[1] + anim.center[1]),
+                         (position[0] - anim.center[0],
+                          position[1] - anim.center[1]),
                          anim.frames[int(anim.currentFrame)])
 
     def set(self, name):

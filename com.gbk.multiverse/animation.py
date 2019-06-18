@@ -1,11 +1,11 @@
-import pygame
+from pygame import image
 
 class Animation:
 
     def __init__(self, filename, cols, rows, count, speed):
         self.speed = speed
 
-        self.sheet = pygame.image.load(filename)
+        self.sheet = image.load(filename)
 
         self.cols = cols
         self.rows = rows
@@ -16,9 +16,9 @@ class Animation:
         self.height = self.rect.height / rows
 
         self.frames = [(index % cols * self.width, index // cols * self.height, self.width, self.height)
-                       for index in range(self.count)] # rects
+                       for index in range(self.count)]
 
-        self.center = (-self.width / 2, -self.height / 2)
+        self.center = (self.width // 2, self.height // 2)
 
         self.currentFrame = 0.0
         self.isPlaying = True

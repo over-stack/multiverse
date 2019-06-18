@@ -1,4 +1,3 @@
-import pygame
 from animationManager import AnimationManager
 
 class Object:
@@ -14,5 +13,6 @@ class Object:
     def update(self, time):
         self.animanager.tick(time)
 
-    def draw(self, surface):
-        self.animanager(surface, self.position[0], self.position[1])
+    def draw(self, surface, cam_frame):
+        position = [self.position[0] + cam_frame[0], self.position[1] + cam_frame[1]]
+        self.animanager.draw(surface, position)
