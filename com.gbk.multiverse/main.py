@@ -18,8 +18,8 @@ cam = Camera(screen_size=screen_size)
 resources_dir = 'resources/gothicvania patreon collection/'
 resources_dir1 = 'resources/tiny-RPG-forest-files/PNG/environment/'
 
-game_world = World(filename=resources_dir1 + 'tileset.png', size=(100, 50))
-game_world.add_tile(position=(208, 288), size=(16, 16), code=0)
+game_world = World(filename=resources_dir1 + 'tileset.png', size=(100, 100), tile_size=(16, 16))
+game_world.add_tile(position=(208, 288), code=0)
 
 anim_dec = AnimationManager()
 
@@ -31,22 +31,25 @@ tree = Decoration(animanager=anim_dec, position=[200, 200], health=100)
 anim_hero = AnimationManager()
 
 anim_hero.create(name='stay', filename=resources_dir + 'Gothic-hero-Files/PNG/gothic-hero-idle.png',
-            cols=4, rows=1, count=4, speed=0.5)
+            cols=4, rows=1, count=4, speed=0.5, looped=True)
 anim_hero.create(name='attack', filename=resources_dir + 'Gothic-hero-Files/PNG/gothic-hero-attack.png',
             cols=6, rows=1, count=6, speed=0.5)
 anim_hero.create(name='walk', filename=resources_dir + 'Gothic-hero-Files/PNG/gothic-hero-run.png',
-            cols=12, rows=1, count=12, speed=0.5)
+            cols=12, rows=1, count=12, speed=0.5, looped=True)
 
 hero = Entity(animanager=anim_hero, position=[0, 0], speed=5, health=100, strength=10)
 
 anim_dog = AnimationManager()
 
 anim_dog.create(name='stay', filename=resources_dir + 'Hell-Hound-Files/PNG/hell-hound-idle.png',
-            cols=6, rows=1, count=6, speed=0.5)
+            cols=6, rows=1, count=6, speed=0.5, looped=True)
 anim_dog.create(name='walk', filename=resources_dir + 'Hell-Hound-Files/PNG/hell-hound-walk.png',
-            cols=12, rows=1, count=12, speed=0.5)
+            cols=12, rows=1, count=12, speed=0.5, looped=True)
 
-dog = Entity(animanager=anim_dog, position=[800, 200], speed=7, health=80, strength=14)
+dog = Entity(animanager=anim_dog, position=[800, 250], speed=7, health=80, strength=14)
+
+decorations = [tree]
+entities = [hero, dog]
 
 Clock = pygame.time.Clock()
 
@@ -63,31 +66,31 @@ while run:
 
     keys = pygame.key.get_pressed()
 
-    ####### CONTROLS #######
-    hero.control(keys)
-
     dog.acceleration[0] = -5
 
-    ####### COLLISION ######
-    hero.check_collision([dog, tree])
-    dog.check_collision([hero, tree])
+    hero.control(keys)
 
-    ####### UPDATES ########
-    hero.update(time)
-    dog.update(time)
+    for ent in entities:
+        ent.check_collision(entities + decorations)
 
-    tree.update(time)
+    for dec in decorations:
+        dec.update(time)
+
+    for ent in entities:
+        ent.update(time)
 
     cam.update(hero.position)
-
     pygame.display.update()
 
     window.fill((0, 0, 0)) # Makes black window
 
-    ####### DRAW #########
-    game_world.draw(window, cam.frame)
-    tree.draw(window, cam.frame)
-    dog.draw(window, cam.frame)
-    hero.draw(window, cam.frame)
+    objects = decorations + entities
+
+    objects.sort(key=lambda obj: obj.position[1]) # sorting objects by y axis
+
+    game_world.draw(window, cam.frame, hero.position, radius=10) # draw map
+
+    for obj in objects: # draw objects
+        obj.draw(window, cam.frame)
 
 pygame.quit()
