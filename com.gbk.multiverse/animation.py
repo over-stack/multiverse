@@ -22,6 +22,7 @@ class Animation:
         self.center = (self.width // 2, self.height // 2)
 
         self.currentFrame = 0.0
+        self.frames_count = len(self.frames)
         self.isPlaying = True
         self.looped = looped
 

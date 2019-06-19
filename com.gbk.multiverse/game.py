@@ -1,10 +1,13 @@
 import sys
+import itertools
 import pygame
 from animationManager import AnimationManager
 from entity import Entity
 from world import World
 from camera import Camera
 from decoration import Decoration
+
+import numpy as np
 
 class Game:
 
@@ -21,67 +24,47 @@ class Game:
         self.fps = 60
         self.vision_radius = self.screen_size[0] // 3
 
-        self.decorations = []
-        self.entities = []
+        self.decorations = list()
+        self.entities = list()
+        self.free_id = 0
+
+        self.resources_dir = 'resources/gothicvania patreon collection/'
+        self.resources_dir1 = 'resources/tiny-RPG-forest-files/PNG/environment/'
 
     def new(self):
+
+        self.animation_managers()
+
         self.cam = Camera(screen_size=self.screen_size)
 
-        resources_dir = 'resources/gothicvania patreon collection/'
-        resources_dir1 = 'resources/tiny-RPG-forest-files/PNG/environment/'
-
-        self.game_world = World(filename=resources_dir1 + 'tileset.png', size=(2000, 2000), tile_size=(16, 16))
+        self.game_world = World(filename=self.resources_dir1 + 'tileset.png', size=(20000, 20000), tile_size=(16, 16))
         self.game_world.add_tile(position=(208, 288), code=0)
 
-        anim_dec = AnimationManager()
+        random_positions = np.random.rand(10, 2) * 1000
 
-        anim_dec.create(name='stay', filename=resources_dir1 + '/sliced-objects/tree-pink.png',
-                        cols=1, rows=1, count=1, speed=0)
+        for i in range(10):
+            self.decorations.append(Decoration(animanager=self.anim_dec,
+                                                       position=list(random_positions[i, :]),
+                                                       max_health=100, id=self.free_id))
+            self.free_id += 1
 
-        tree = Decoration(animanager=anim_dec, position=[200, 200], health=100)
-
-        self.decorations.append(tree)
-
-        anim_hero = AnimationManager()
-
-        anim_hero.create(name='stay', filename=resources_dir + 'Gothic-hero-Files/PNG/gothic-hero-idle.png',
-                         cols=4, rows=1, count=4, speed=0.5, looped=True)
-        anim_hero.create(name='attack', filename=resources_dir + 'Gothic-hero-Files/PNG/gothic-hero-attack.png',
-                         cols=6, rows=1, count=6, speed=0.5)
-        anim_hero.create(name='walk', filename=resources_dir + 'Gothic-hero-Files/PNG/gothic-hero-run.png',
-                         cols=12, rows=1, count=12, speed=0.5, looped=True)
-
-        self.hero = Entity(animanager=anim_hero, position=[700, 100], speed=5, health=100, strength=10)
+        self.hero = Entity(animanager=self.anim_hero, position=[800, 400], speed=5, max_health=100, strength=7, id=self.free_id)
+        self.hero.have_not_death_anim = True
 
         self.entities.append(self.hero)
+        self.free_id += 1
 
-        anim_dog = AnimationManager()
-
-        anim_dog.create(name='stay', filename=resources_dir + 'Hell-Hound-Files/PNG/hell-hound-idle.png',
-                        cols=6, rows=1, count=6, speed=0.5, looped=True)
-        anim_dog.create(name='walk', filename=resources_dir + 'Hell-Hound-Files/PNG/hell-hound-walk.png',
-                        cols=12, rows=1, count=12, speed=0.5, looped=True)
-
-        dog = Entity(animanager=anim_dog, position=[800, 250], speed=7, health=80, strength=14)
-
+        dog = Entity(animanager=self.anim_dog, position=[1100, 250], speed=7, max_health=80, strength=14, id=self.free_id)
+        dog.have_not_death_anim = True
         dog.acceleration[0] = -5
 
         self.entities.append(dog)
+        self.free_id += 1
 
-        anim_ghost = AnimationManager()
-
-        anim_ghost.create(name='stay', filename=resources_dir + 'Ghost-Files/PNG/ghost-idle.png',
-                          cols=7, rows=1, count=7, speed=0.5, looped=True)
-
-        anim_ghost.create(name='walk', filename=resources_dir + 'Ghost-Files/PNG/ghost-shriek.png',
-                          cols=4, rows=1, count=4, speed=0.5, looped=True)
-
-        anim_ghost.create(name='death', filename=resources_dir + 'Ghost-Files/PNG/ghost-vanish.png',
-                          cols=7, rows=1, count=7, speed=0.5, looped=False)
-
-        ghost = Entity(animanager=anim_ghost, position= [700, 250], speed=7, health=200, strength=20)
+        ghost = Entity(animanager=self.anim_ghost, position=[700, 250], speed=7, max_health=200, strength=20, id=self.free_id)
 
         self.entities.append(ghost)
+        self.free_id += 1
 
     def run(self):
 
@@ -100,8 +83,8 @@ class Game:
 
             keys = pygame.key.get_pressed()
 
-            if len(self.entities) >= 3:
-                self.entities[2].health -= 1
+            for ent in self.entities:
+                ent.vision(self.entities)
 
             self.hero.control(keys)
 
@@ -143,7 +126,7 @@ class Game:
 
         self.game_world.draw(self.canvas, self.cam.frame, self.hero.position, radius=self.vision_radius)  # draw map
 
-        for obj in objects:  # draw objects
+        for obj in objects:  # draw objects # the nearest
             if self.hero.position[0] - self.vision_radius <= obj.position[0] <= self.hero.position[0] + self.vision_radius:
                 if self.hero.position[1] - self.vision_radius <= obj.position[1] <= self.hero.position[1] + self.vision_radius:
                     obj.draw(self.canvas, self.cam.frame)
@@ -152,6 +135,35 @@ class Game:
         self.window.blit(pygame.transform.scale(self.canvas, [self.screen_size[0] * k,
                                                               self.screen_size[1] * k]),
                          (-self.screen_size[0] // k, -self.screen_size[1] // k))
+
+    def animation_managers(self):
+
+        self.anim_dec = AnimationManager()
+        self.anim_hero = AnimationManager()
+        self.anim_dog = AnimationManager()
+        self.anim_ghost = AnimationManager()
+
+        self.anim_dec.create(name='stay', filename=self.resources_dir1 + '/sliced-objects/tree-pink.png',
+                        cols=1, rows=1, count=1, speed=0)
+
+        self.anim_hero.create(name='stay', filename=self.resources_dir + 'Gothic-hero-Files/PNG/gothic-hero-idle.png',
+                         cols=4, rows=1, count=4, speed=0.5, looped=True)
+        self.anim_hero.create(name='attack', filename=self.resources_dir + 'Gothic-hero-Files/PNG/gothic-hero-attack.png',
+                         cols=6, rows=1, count=6, speed=0.5)
+        self.anim_hero.create(name='walk', filename=self.resources_dir + 'Gothic-hero-Files/PNG/gothic-hero-run.png',
+                         cols=12, rows=1, count=12, speed=0.5, looped=True)
+
+        self.anim_ghost.create(name='stay', filename=self.resources_dir + 'Ghost-Files/PNG/ghost-idle.png',
+                          cols=7, rows=1, count=7, speed=0.5, looped=True)
+        self.anim_ghost.create(name='walk', filename=self.resources_dir + 'Ghost-Files/PNG/ghost-shriek.png',
+                          cols=4, rows=1, count=4, speed=0.5, looped=True)
+        self.anim_ghost.create(name='death', filename=self.resources_dir + 'Ghost-Files/PNG/ghost-vanish.png',
+                          cols=7, rows=1, count=7, speed=0.5, looped=False)
+
+        self.anim_dog.create(name='stay', filename=self.resources_dir + 'Hell-Hound-Files/PNG/hell-hound-idle.png',
+                        cols=6, rows=1, count=6, speed=0.5, looped=True)
+        self.anim_dog.create(name='walk', filename=self.resources_dir + 'Hell-Hound-Files/PNG/hell-hound-walk.png',
+                        cols=12, rows=1, count=12, speed=0.5, looped=True)
 
 if __name__ == '__main__':
     game = Game([1280, 720], 'Multiverse')
