@@ -14,9 +14,10 @@ class Animation:
         self.rect = self.sheet.get_rect()
         self.width = self.rect.width / cols
         self.height = self.rect.height / rows
+        self.depth = self.height / 2 # axis z
 
         self.frames = [(index % cols * self.width, index // cols * self.height, self.width, self.height)
-                       for index in range(self.count)]
+                       for index in range(self.count)] # like rects
 
         self.center = (self.width // 2, self.height // 2)
 
@@ -31,5 +32,8 @@ class Animation:
         self.currentFrame += self.speed * time
 
         if self.currentFrame > self.count:
-            self.currentFrame -= self.count
-            self.isPlaying = False
+            if not self.looped:
+                self.isPlaying = False
+                self.currentFrame = len(self.frames) - 1 # stopping on the last frame
+            else:
+                self.currentFrame -= self.count

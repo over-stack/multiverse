@@ -42,11 +42,12 @@ class AnimationManager:
     def tick(self, time):
         self.animations[self.currentAnimation].tick(time)
 
-        if self.get().looped and not self.get().isPlaying:
-            self.animations[self.currentAnimation].isPlaying = True
-
     def pause(self):
         self.animations[self.currentAnimation].isPlaying = False
 
     def play(self):
         self.animations[self.currentAnimation].isPlaying = True
+
+    def start(self):
+        self.animations[self.currentAnimation].currentFrame = 0
+        self.play()

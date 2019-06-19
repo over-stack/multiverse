@@ -7,8 +7,10 @@ class Object:
         self.position = position
         self.collision = True
 
-        self.width = list(self.animanager.animations.values())[0].width
-        self.height = list(self.animanager.animations.values())[0].height
+        first_animation = list(self.animanager.animations.values())[0]
+        self.width = first_animation.width
+        self.height = first_animation.height
+        self.depth = first_animation.depth
 
     def update(self, time):
         self.animanager.tick(time)

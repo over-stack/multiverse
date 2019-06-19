@@ -14,13 +14,13 @@ class Entity(Object):
 
         self.state = 'stay'
         self.busy = False
+        self.alive = True
 
     def control(self, keys):
 
-        self.keys_pressed(keys)
-        self.keys_released(keys)
-
-        self.animanager.set(self.state)
+        if self.state != 'death':
+            self.keys_pressed(keys)
+            self.keys_released(keys)
 
     def keys_pressed(self, keys):
 
@@ -29,14 +29,14 @@ class Entity(Object):
                 self.acceleration[0] = self.speed
                 self.state = 'walk'
 
-            self.animanager.flip(False)
+                self.animanager.flip(False)
 
         if keys[pygame.K_a]:
             if not self.busy:
                 self.acceleration[0] = -self.speed
                 self.state = 'walk'
 
-            self.animanager.flip(True)
+                self.animanager.flip(True)
 
         if keys[pygame.K_w]:
             if not self.busy:
@@ -49,6 +49,11 @@ class Entity(Object):
                 self.state = 'walk'
 
         if keys[pygame.K_SPACE]:
+            self.acceleration[0] = 0
+            self.acceleration[1] = 0
+            if self.state == 'attack' and not self.animanager.get().isPlaying:
+                self.busy = False
+                self.animanager.start()
             if not self.busy:
                 self.state = 'attack'
                 self.busy = True
@@ -60,6 +65,22 @@ class Entity(Object):
                 self.acceleration[0] = 0
                 self.acceleration[1] = 0
                 self.state = 'stay'
+
+        if not keys[pygame.K_a]:
+            if self.acceleration[0] < 0:
+                self.acceleration[0] = 0
+
+        if not keys[pygame.K_d]:
+            if self.acceleration[0] > 0:
+                self.acceleration[0] = 0
+
+        if not keys[pygame.K_w]:
+            if self.acceleration[1] < 0:
+                self.acceleration[1] = 0
+
+        if not keys[pygame.K_s]:
+            if self.acceleration[1] > 0:
+                self.acceleration[1] = 0
 
         if not (keys[pygame.K_SPACE]) and self.state == 'attack':
             if not self.animanager.get().isPlaying:
@@ -75,8 +96,8 @@ class Entity(Object):
 
         left = self.position[0] - self.width / 2
         right = left + self.width
-        top = self.position[1] - self.height / 2
-        bottom = top + self.height
+        top = self.position[1] - self.height / 2 + self.depth
+        bottom = top + self.height / 2
 
         for object in objects:
 
@@ -85,13 +106,13 @@ class Entity(Object):
 
             obj_left = object.position[0] - object.width / 2
             obj_right = obj_left + object.width
-            obj_top = object.position[1] - object.height / 2
-            obj_bottom = obj_top + object.height
+            obj_top = object.position[1] - object.height / 2 + object.depth
+            obj_bottom = obj_top + object.height / 2
 
             # If we go Right
             if (right >= obj_left) and (left < obj_left):
                 if (bottom > obj_top) and (top < obj_bottom): # < > not <= >= because of teleporting
-                    if self.acceleration[0] > 0:
+                    if self.acceleration[0] > 0:              # but shaking on angles...
                         self.acceleration[0] = 0
                         self.position[0] = obj_left - self.width / 2
 
@@ -114,10 +135,17 @@ class Entity(Object):
                 if (right > obj_left) and (left < obj_right):
                     if self.acceleration[1] < 0:
                         self.acceleration[1] = 0
-                        self.position[1] = obj_bottom + self.height / 2
+                        self.position[1] = obj_bottom + self.height / 2 - self.depth
 
     def update(self, time):
+        self.animanager.set(self.state)
         Object.update(self, time)
 
         self.position[0] += self.acceleration[0] * time
         self.position[1] += self.acceleration[1] * time
+
+        if self.state == 'death' and not self.animanager.get().isPlaying:
+            self.alive = False
+
+    def die(self):
+        self.state = 'death'
