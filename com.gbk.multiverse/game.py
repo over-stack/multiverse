@@ -45,23 +45,24 @@ class Game:
         for i in range(10):
             self.decorations.append(Decoration(animanager=self.anim_dec,
                                                        position=list(random_positions[i, :]),
-                                                       max_health=100, id=self.free_id))
+                                                       max_health=1000, id=self.free_id))
+            self.decorations[i].have_not_death_anim = True
             self.free_id += 1
 
-        self.hero = Entity(animanager=self.anim_hero, position=[800, 400], speed=5, max_health=100, strength=7, id=self.free_id)
+        self.hero = Entity(animanager=self.anim_hero, position=[800, 400], speed=10, max_health=100, strength=7, id=self.free_id)
         self.hero.have_not_death_anim = True
 
         self.entities.append(self.hero)
         self.free_id += 1
 
-        dog = Entity(animanager=self.anim_dog, position=[1100, 250], speed=7, max_health=80, strength=14, id=self.free_id)
+        dog = Entity(animanager=self.anim_dog, position=[1100, 450], speed=-12, max_health=80, strength=14, id=self.free_id)
         dog.have_not_death_anim = True
-        dog.acceleration[0] = -5
+        dog.acceleration[0] = dog.speed / 2
 
         self.entities.append(dog)
         self.free_id += 1
 
-        ghost = Entity(animanager=self.anim_ghost, position=[700, 250], speed=7, max_health=200, strength=20, id=self.free_id)
+        ghost = Entity(animanager=self.anim_ghost, position=[700, 250], speed=10, max_health=200, strength=20, id=self.free_id)
 
         self.entities.append(ghost)
         self.free_id += 1
@@ -84,7 +85,7 @@ class Game:
             keys = pygame.key.get_pressed()
 
             for ent in self.entities:
-                ent.vision(self.entities)
+                ent.vision(self.entities + self.decorations)
 
             self.hero.control(keys)
 

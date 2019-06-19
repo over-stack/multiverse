@@ -20,11 +20,18 @@ class Entity(Object):
         self.have_not_death_anim = False # only for debugging
         self.request = False # request for action
 
+        self.satiety = 100
+
     def control(self, keys):
 
         if self.state != 'death':
             self.keys_pressed(keys)
             self.keys_released(keys)
+
+    def ai_control(self, outputs):
+        keys = [pygame.K_d, pygame.K_a, pygame.K_w, pygame.K_s, pygame.K_SPACE]
+
+        #self.control(keys[outputs])
 
     def keys_pressed(self, keys):
 
@@ -161,6 +168,20 @@ class Entity(Object):
                     self.interact()
                     self.request = False
 
+        if self.satiety > 0:
+            self.satiety -= 0.5
+        else:
+            self.health -= 1
+
+        if self.satiety > 100:
+            self.satiety = 100
+
+        if self.satiety > 50:
+            self.health += 5
+
+        if self.health > self.max_health:
+            self.health = self.max_health
+
     def die(self):
         if self.have_not_death_anim: # change it
             self.alive = False
@@ -181,3 +202,14 @@ class Entity(Object):
                 if self.id != obj.id:
                     if obj.in_area(area):
                         obj.health -= self.strength
+                        self.satiety += 20
+
+    def draw(self, surface, cam_frame):
+        Object.draw(self, surface, cam_frame)
+
+        position = [self.position[0] + cam_frame[0], self.position[1] + cam_frame[1]]
+
+        satiety_line_width = 40
+        scaled_satiety = self.satiety / (100 / satiety_line_width)
+        pygame.draw.rect(surface, (128, 0, 0),
+                         (position[0] - scaled_satiety / 2, position[1] - self.height / 2 + 4, scaled_satiety, 2))
