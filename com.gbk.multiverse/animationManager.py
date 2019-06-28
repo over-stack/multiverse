@@ -1,3 +1,4 @@
+from copy import deepcopy
 from pygame import transform
 from animation import Animation
 
@@ -9,8 +10,8 @@ class AnimationManager:
         self.lastAnimation = ''
         self.flipped = False
 
-    def create(self, name, filename, cols, rows, count, speed, looped=False):
-        self.animations[name] = Animation(filename, cols, rows, count, speed, looped)
+    def create(self, name, sheet, cols, rows, count, speed, looped=False):
+        self.animations[name] = Animation(sheet, cols, rows, count, speed, looped)
         self.currentAnimation = name
 
     def draw(self, surface, position):
@@ -28,6 +29,8 @@ class AnimationManager:
                          anim.frames[int(anim.currentFrame)])
 
     def set(self, name):
+        if name not in self.animations.keys():
+            name = 'stay'
         self.currentAnimation = name
         if self.lastAnimation != self.currentAnimation and len(self.lastAnimation):
             self.animations[self.lastAnimation].currentFrame = 0
@@ -51,3 +54,6 @@ class AnimationManager:
     def start(self):
         self.animations[self.currentAnimation].currentFrame = 0
         self.play()
+
+    def copy(self):
+        return deepcopy(self)

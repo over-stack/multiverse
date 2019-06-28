@@ -1,4 +1,5 @@
-from pygame import image
+from pygame import image, Rect
+import pygame
 
 class World:
 
@@ -7,21 +8,35 @@ class World:
         self.size = size
         self.size_in_tiles = [size[0] // tile_size[0], size[1] // tile_size[1]]
         self.tile_size = tile_size
-        self.matrix = [[0 for i in range(self.size_in_tiles[0])] for j in range(self.size_in_tiles[1])]
+        self.matrix = self.generate_matrix()
         self.tiles = dict()
+
+        self.game_time = 0
+        self.sun_brightness = 100
+        self.sun = (0, 0, 0, 255)
+
+        self.heat_map = list()
+        self.rain_map = list()
+        self.water_map = list()
+
+    def generate_world(self):
+        pass
+
+    def get_world_around(self, position):
+        return self.heat_map
 
     def add_tile(self, position, code):
         self.tiles[code] = position
 
-    def generate_matrix(self, size):
-        pass
+    def generate_matrix(self):
+        return [[0 for _ in range(self.size_in_tiles[0])] for _ in range(self.size_in_tiles[1])]
 
-    def draw(self, surface, scroll, position, radius):
+    def draw(self, surface, scroll, position, width, height):
 
-        left = int((position[0] - radius) // self.tile_size[0])
-        right = int((position[0] + radius) // self.tile_size[0])
-        top = int((position[1] - radius) // self.tile_size[1])
-        bottom = int((position[1] + radius) // self.tile_size[1])
+        left = int((position[0] - width) // self.tile_size[0])
+        right = int((position[0] + width) // self.tile_size[0])
+        top = int((position[1] - height) // self.tile_size[1])
+        bottom = int((position[1] + height) // self.tile_size[1])
 
         if left < 0:
             left = 0

@@ -1,10 +1,10 @@
+import random
 import pygame
 from object import Object
 
 class Entity(Object):
-
-    def __init__(self, animanager, position, speed, max_health, strength, id):
-        Object.__init__(self, animanager, position, id, max_health)
+    def __init__(self, animanager, position, speed, max_health, strength, id_, family='single', type='entity'):
+        Object.__init__(self, animanager, position, id_, max_health, family, type)
 
         self.position = position
         self.speed = speed
@@ -17,10 +17,34 @@ class Entity(Object):
 
         self.objects_around = []
 
-        self.have_not_death_anim = False # only for debugging
         self.request = False # request for action
 
-        self.satiety = 100
+        self.max_satiety = 100
+        self.satiety = self.max_satiety
+        self.satiety_speed = 0.05
+        self.satiety_damage = 0.05
+        self.min_satiety = 25  # min amount satiety for regeneration
+
+        self.speed_bonus = 0
+        self.strength_bonus = 0
+        self.satiety_bonus = 0
+        self.regeneration_speed_bonus = 0
+        self.satiety_speed_bonus = 0
+
+        self.attack_area_size = [40, 40]
+
+        self.ai = True
+        self.priorities = dict()
+
+    def generate_priorities(self, env_states):
+
+        nums = [random.uniform(0, 1)]
+        for i in range(len(env_states) - 1):
+            nums.append(random.uniform(0, 1 - sum(nums)))
+        nums.append(1 - sum(nums))
+
+        for i in range(len(env_states)):
+            self.priorities[env_states[i]] = nums[i]
 
     def control(self, keys):
 
@@ -28,10 +52,15 @@ class Entity(Object):
             self.keys_pressed(keys)
             self.keys_released(keys)
 
-    def ai_control(self, outputs):
-        keys = [pygame.K_d, pygame.K_a, pygame.K_w, pygame.K_s, pygame.K_SPACE]
+    def ai_control(self, decision):
 
-        #self.control(keys[outputs])
+        keys = dict(zip([pygame.K_d, pygame.K_a, pygame.K_w, pygame.K_s, pygame.K_SPACE],
+                        [False, False, False, False, False]))
+
+        if decision < 5:
+            keys[list(keys.keys())[decision]] = True
+
+        self.control(keys)
 
     def keys_pressed(self, keys):
 
@@ -65,6 +94,7 @@ class Entity(Object):
             if self.state == 'attack' and not self.animanager.get().isPlaying:
                 self.busy = False
                 self.animanager.start()
+
             if not self.busy:
                 self.state = 'attack'
                 self.busy = True
@@ -116,7 +146,7 @@ class Entity(Object):
 
         for object in objects:
 
-            if not object.collision or self.id == object.id:
+            if not object.collision or self.id_ == object.id_:
                 continue
 
             obj_left = object.position[0] - object.width / 2 + (object.width / 8) # + shift
@@ -153,14 +183,19 @@ class Entity(Object):
                         self.position[1] = obj_bottom + (height + self.depth) / 2 - self.depth
 
     def update(self, time):
+
+        if self.health <= 0:
+            self.die()
+
         self.animanager.set(self.state)
         Object.update(self, time)
 
         self.position[0] += self.acceleration[0] * time
         self.position[1] += self.acceleration[1] * time
 
-        if self.state == 'death' and not self.animanager.get().isPlaying:
-            self.alive = False
+        if self.state == 'death':
+            if not self.animanager.get().isPlaying or not self.animanager.currentAnimation == 'death':
+                self.alive = False
 
         if self.busy and self.request:
             if self.state == 'attack':
@@ -169,40 +204,34 @@ class Entity(Object):
                     self.request = False
 
         if self.satiety > 0:
-            self.satiety -= 0.5
+            self.satiety -= self.satiety_speed
         else:
-            self.health -= 1
+            self.health -= self.satiety_damage
 
-        if self.satiety > 100:
-            self.satiety = 100
+        if self.satiety > self.max_satiety + self.satiety_bonus:
+            self.satiety = self.max_satiety + self.satiety_bonus
 
-        if self.satiety > 50:
-            self.health += 5
-
-        if self.health > self.max_health:
-            self.health = self.max_health
+        if self.satiety > self.min_satiety:
+            self.health += self.regeneration_speed + self.regeneration_speed_bonus
 
     def die(self):
-        if self.have_not_death_anim: # change it
-            self.alive = False
-        else:
-            self.state = 'death'
+        self.state = 'death'
 
-    def vision(self, objects):
-        self.objects_around = objects
+    def look_around(self, objects_around, world_around):
+        self.objects_around = objects_around
 
     def interact(self):
         if self.state == 'attack':
 
-            area = [self.position[0] + self.width // 2, self.position[1] - self.height // 2, 40, 40]
+            area = [self.position[0] + self.width // 2, self.position[1] - self.height // 2] + self.attack_area_size
             if self.animanager.flipped:
-                area[0] -= self.width + 40
+                area[0] -= self.width + self.attack_area_size[0]
 
             for obj in self.objects_around:
-                if self.id != obj.id:
+                if self.id_ != obj.id_:
                     if obj.in_area(area):
-                        obj.health -= self.strength
-                        self.satiety += 20
+                        obj.health -= self.strength + self.strength_bonus
+                        self.satiety += 20  # only for debug
 
     def draw(self, surface, cam_frame):
         Object.draw(self, surface, cam_frame)
@@ -213,3 +242,21 @@ class Entity(Object):
         scaled_satiety = self.satiety / (100 / satiety_line_width)
         pygame.draw.rect(surface, (128, 0, 0),
                          (position[0] - scaled_satiety / 2, position[1] - self.height / 2 + 4, scaled_satiety, 2))
+
+    def get_features(self):
+
+        my = [self.health, self.satiety, self.strength, self.speed]
+
+        if not len(self.objects_around):
+            features = my + [0] * 8
+            return features
+
+        # min_health = entities[min(enumerate(ent_health), key=itemgetter(1))[0]]
+        features = my + [0] * 8
+
+        return features
+
+    def sex(self, entity, free_id):
+        if entity.family == self.family:
+            return Entity(self.animanager.copy(), self.position, self.speed, self.max_health,
+                          self.strength, free_id, family=self.family)

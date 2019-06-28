@@ -1,11 +1,10 @@
-from pygame import image
+from copy import deepcopy
 
 class Animation:
-
-    def __init__(self, filename, cols, rows, count, speed, looped=False):
+    def __init__(self, sheet, cols, rows, count, speed, looped=False):
         self.speed = speed
 
-        self.sheet = image.load(filename)
+        self.sheet = sheet
 
         self.cols = cols
         self.rows = rows
@@ -32,9 +31,13 @@ class Animation:
 
         self.currentFrame += self.speed * time
 
-        if self.currentFrame > self.count:
+        if self.currentFrame > self.count - 1:
             if not self.looped:
                 self.isPlaying = False
-                self.currentFrame = len(self.frames) - 1 # stopping on the last frame
+                self.currentFrame = self.count - 1  # stopping on the last frame
             else:
-                self.currentFrame -= self.count
+                self.currentFrame -= self.count - 1
+
+    def __deepcopy__(self, memo):  # makes copy without copying sheet
+        return Animation(self.sheet, deepcopy(self.cols, memo), deepcopy(self.rows, memo),
+                         deepcopy(self.count, memo), deepcopy(self.speed, memo), deepcopy(self.looped, memo))
