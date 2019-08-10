@@ -1,13 +1,12 @@
+from my_libs import Rect, Vector2D
 
 class Camera:
-    def __init__(self, screen_size, coef):
-        self.center = [screen_size[0] / 2, screen_size[1] / 2]
-        self.frame = [self.center[0], self.center[1]]
-        self.screen_size = screen_size
-        self.coef = coef
-        self.width = self.screen_size[0] / self.coef
-        self.height = self.screen_size[1] / self.coef
-        self.bias = 16 * 2  # only for drawing # make to object self draw rect
+    def __init__(self, screen_size, coefficient):
+        self.center = Vector2D(screen_size.x / 2, screen_size.y / 2)
+        self.coefficient = coefficient
+        self.frame = Rect(self.center.x, self.center.y,
+                          screen_size.x / self.coefficient, screen_size.y / self.coefficient, isCenter=True)
+        self.bias = 16 * 2
 
     def update(self, position):
-        self.frame = [self.center[0] - position[0], self.center[1] - position[1]]
+        self.frame.move_to(self.center.x - position.x, self.center.y - position.y)

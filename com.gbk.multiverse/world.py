@@ -1,19 +1,17 @@
 from pygame import image, Rect
 import pygame
 
+from my_libs import Rect, Vector2D
+
 class World:
 
     def __init__(self, filename, size, tile_size):
         self.image = image.load(filename)
         self.size = size
-        self.size_in_tiles = [size[0] // tile_size[0], size[1] // tile_size[1]]
+        self.size_in_tiles = Vector2D(size.x // tile_size.x, size.y // tile_size.y)
         self.tile_size = tile_size
         self.matrix = self.generate_matrix()
         self.tiles = dict()
-
-        self.game_time = 0
-        self.sun_brightness = 100
-        self.sun = (0, 0, 0, 255)
 
         self.heat_map = list()
         self.rain_map = list()
@@ -29,14 +27,14 @@ class World:
         self.tiles[code] = position
 
     def generate_matrix(self):
-        return [[0 for _ in range(self.size_in_tiles[0])] for _ in range(self.size_in_tiles[1])]
+        return [[0 for _ in range(self.size_in_tiles.x)] for _ in range(self.size_in_tiles.y)]
 
     def draw(self, surface, scroll, position, width, height):
 
-        left = int((position[0] - width) // self.tile_size[0])
-        right = int((position[0] + width) // self.tile_size[0])
-        top = int((position[1] - height) // self.tile_size[1])
-        bottom = int((position[1] + height) // self.tile_size[1])
+        left = int((position.x - width) // self.tile_size.x)
+        right = int((position.x + width) // self.tile_size.x)
+        top = int((position.y - height) // self.tile_size.y)
+        bottom = int((position.y + height) // self.tile_size.y)
 
         if left < 0:
             left = 0
@@ -50,20 +48,21 @@ class World:
         if bottom < 0:
             bottom = 0
 
-        if left > self.size_in_tiles[0]:
-            left = self.size_in_tiles[0]
+        if left > self.size_in_tiles.x:
+            left = self.size_in_tiles.x
 
-        if right > self.size_in_tiles[0]:
-            right = self.size_in_tiles[0]
+        if right > self.size_in_tiles.x:
+            right = self.size_in_tiles.x
 
-        if top > self.size_in_tiles[1]:
-            top = self.size_in_tiles[1]
+        if top > self.size_in_tiles.y:
+            top = self.size_in_tiles.y
 
-        if bottom > self.size_in_tiles[1]:
-            bottom = self.size_in_tiles[1]
+        if bottom > self.size_in_tiles.y:
+            bottom = self.size_in_tiles.y
 
         for y in range(top, bottom):
             for x in range(left, right):
                 tile = self.tiles[self.matrix[y][x]]
-                surface.blit(self.image, (x * self.tile_size[0] + scroll[0],
-                                          y * self.tile_size[1] + scroll[1]), tile + self.tile_size)
+                surface.blit(self.image, (x * self.tile_size.x + scroll.x,
+                                          y * self.tile_size.y + scroll.y),
+                             list(tile.get_tuple()) + list(self.tile_size.get_tuple()))

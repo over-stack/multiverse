@@ -1,63 +1,60 @@
 import pygame
+
 from animationManager import AnimationManager
+from my_libs import Rect, Vector2D
+import GUI
 
 class Object:
-    def __init__(self, animanager, position, id_, max_health=100, family='single', type='object'):
+    def __init__(self, animanager, position, id_, max_health=100, family='single', type_='object'):
         self.animanager = animanager
-        self.position = position
-        self.collision = True
-
-        first_animation = list(self.animanager.animations.values())[0]
-        self.width = first_animation.width
-        self.height = first_animation.height
-        self.depth = first_animation.depth
+        self.position = position  # center
 
         self.max_health = max_health
         self.health = max_health
         self.regeneration_speed = 0.1
-        self.health_bonus = 0
+
+        self.health_bonus = 0.
+        self.regeneration_speed_bonus = 0.
 
         self.id_ = id_
-        self.type = type
+        self.type_ = type_
         self.family = family
+        self.isCollision = True
+        self.state = 'stay'
+        self.alive = True
+
+        self.animanager.set(self.state)
+        self.health_bar = GUI.Bar(self.get_rect().width, self.get_rect().height + 8, 2,
+                                  {75: (0, 255, 0), 25: (255, 0, 0), 0: (0, 0, 0)})
 
     def update(self, time):
+        if self.health <= 0:
+            self.state = 'death'
+
+        self.animanager.set(self.state)
         self.animanager.tick(time)
+
+        if self.state == 'death':
+            if not self.animanager.get().isPlaying or not self.animanager.currentAnimation == 'death':
+                self.alive = False
 
         if self.health > self.max_health + self.health_bonus:
             self.health = self.max_health + self.health_bonus
 
         if self.health < 0:
-            self.health = 0
+            self.health = 0.
 
     def draw(self, surface, cam_frame):
-        position = [self.position[0] + cam_frame[0], self.position[1] + cam_frame[1]]
-        self.animanager.draw(surface, position)
+        self.animanager.draw(surface, self.get_rect().topleft, cam_frame)
+        self.health_bar.draw(surface, self.health, self.max_health, self.health_bonus,
+                             self.get_rect().center, cam_frame)
 
-        health_line_width = 40
-        scaled_health = self.health / ((self.max_health + self.health_bonus) / health_line_width)
-        health_color = (0, 255, 0) # GREEN
-        if 25.0 * (health_line_width / 100) <= scaled_health <= 75.0 * (health_line_width / 100): # %
-            health_color = (255, 255, 0) # YELLOW
-        elif scaled_health < 25:
-            health_color= (255, 0, 0) # BLUE
+    def get_rect(self):
+        animation = self.animanager.get()
+        return Rect(self.position.x, self.position.y, animation.width, animation.height, isCenter=True)
 
-        pygame.draw.rect(surface, health_color,
-                         (position[0] - scaled_health / 2, position[1] - self.height / 2, scaled_health, 2))
-
-    def in_area(self, area):
-
-        intersects = True
-
-        left = self.position[0] - self.width / 2
-        right = left + self.width
-        top = self.position[1] - self.height / 2
-        bottom = top + self.height / 2
-
-        if top > area[1] + area[3] or bottom < area[1]:
-            intersects = False
-
-        if right < area[0] or left > area[0] + area[2]:
-            intersects = False
-
-        return intersects
+    def get_collision_rect(self):
+        rect = self.get_rect()
+        animation = self.animanager.get()
+        return Rect(rect.left + animation.shift, rect.bottom - animation.depth,
+                    rect.width - 2 * animation.shift, animation.depth)

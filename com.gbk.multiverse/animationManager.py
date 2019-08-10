@@ -2,6 +2,8 @@ from copy import deepcopy
 from pygame import transform
 from animation import Animation
 
+from my_libs import Rect, Vector2D
+
 class AnimationManager:
 
     def __init__(self):
@@ -14,19 +16,18 @@ class AnimationManager:
         self.animations[name] = Animation(sheet, cols, rows, count, speed, looped)
         self.currentAnimation = name
 
-    def draw(self, surface, position):
-        anim = self.animations[self.currentAnimation]
+    def draw(self, surface, topleft, cam_frame):  # position = topleft
+        position = Vector2D(topleft.x + cam_frame.left, topleft.y + cam_frame.top)
 
+        anim = self.animations[self.currentAnimation]
         if self.flipped:
             surface.blit(transform.flip(anim.sheet, True, False),
-                     (position[0] - anim.center[0],
-                      position[1] - anim.center[1]),
-                    anim.frames[int(anim.currentFrame)])
+                         (position.x, position.y),
+                         anim.frames[int(anim.currentFrame)].get_tuple())
         else:
             surface.blit(anim.sheet,
-                         (position[0] - anim.center[0],
-                          position[1] - anim.center[1]),
-                         anim.frames[int(anim.currentFrame)])
+                         (position.x, position.y),
+                         anim.frames[int(anim.currentFrame)].get_tuple())
 
     def set(self, name):
         if name not in self.animations.keys():
@@ -54,6 +55,9 @@ class AnimationManager:
     def start(self):
         self.animations[self.currentAnimation].currentFrame = 0
         self.play()
+
+    def get_elapsed_time(self):
+        return ((self.get().currentFrame + 1) / (self.get().count / 100)) / 100  # 0 - 1
 
     def copy(self):
         return deepcopy(self)

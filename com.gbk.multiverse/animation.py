@@ -1,5 +1,7 @@
 from copy import deepcopy
 
+from my_libs import Rect, Vector2D
+
 class Animation:
     def __init__(self, sheet, cols, rows, count, speed, looped=False):
         self.speed = speed
@@ -14,14 +16,13 @@ class Animation:
         self.width = self.rect.width / cols
         self.height = self.rect.height / rows
         self.depth = self.height / 2 # axis z
+        self.shift = self.width / 4  # width shift
+        self.center = Vector2D(self.width // 2, self.height // 2)
 
-        self.frames = [(index % cols * self.width, index // cols * self.height, self.width, self.height)
-                       for index in range(self.count)] # like rects
-
-        self.center = (self.width // 2, self.height // 2)
+        self.frames = [Rect(index % cols * self.width, index // cols * self.height, self.width, self.height)
+                       for index in range(self.count)]
 
         self.currentFrame = 0.0
-        self.frames_count = len(self.frames)
         self.isPlaying = True
         self.looped = looped
 

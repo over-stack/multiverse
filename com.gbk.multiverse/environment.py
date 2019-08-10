@@ -1,45 +1,48 @@
 from entity import Entity
 from decoration import Decoration
 
-
 class Environment:
-    def __init__(self, bonus, conditions):
-        self.bonus = bonus
-        self.conditions = conditions
+    def __init__(self):
+        self.bonus = {'forest': {'health': 10, 'strength': 10, 'satiety': 10},
+                      'alone': {'health': 10, 'strength': 10, 'satiety': 10},
+                      'support': {'health': 10, 'strength': 10, 'satiety': 10}}
 
     def get_states(self):
         return list(self.bonus.keys())
 
     def apply(self, entity, objects_around, world_around):
-
-        classes_count = dict(zip([value[1] for value in self.conditions.values()],
-                                 [0] * len(self.conditions)))
+        return
+        tree_count = 0
+        entity_count = 0
+        same_entity_count = 0
 
         for obj in objects_around:
             if obj.family == 'tree':
-                classes_count['tree'] += 1
+                tree_count += 1
 
             if obj.type == 'entity' and obj.id_ != entity.id_:
-                classes_count['entity'] += 1
+                entity_count += 1
                 if obj.family == entity.family:
-                    classes_count['same'] += 1
+                    same_entity_count += 1
 
-        env_classes = list()
-        if classes_count['tree'] > 4:
-            env_classes.append('forest')
+        active_states = set()
+
+        if tree_count > 4:
+            active_states.add('forest')
             print('forest')
 
-        if classes_count['entity'] == 0:
-            env_classes.append('alone')
+        if entity_count == 0:
+            active_states.add('alone')
             print('alone')
 
-        if classes_count['same'] > 3:
-            env_classes.append('support')
+        if same_entity_count > 3:
+            active_states.add('support')
+            print('support')
 
-        if len(env_classes) != 0:
+        if len(active_states) != 0:
             entity.health_bonus = sum(
-                [entity.priorities[name_class] * self.bonus[name_class]['health'] for name_class in env_classes])
+                [entity.priorities[state] * self.bonus[state]['health'] for state in active_states])
             entity.strength_bonus = sum(
-                [entity.priorities[name_class] * self.bonus[name_class]['strength'] for name_class in env_classes])
+                [entity.priorities[state] * self.bonus[state]['strength'] for state in active_states])
             entity.satiety_bonus = sum(
-                [entity.priorities[name_class] * self.bonus[name_class]['satiety'] for name_class in env_classes])
+                [entity.priorities[state] * self.bonus[state]['satiety'] for state in active_states])

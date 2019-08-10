@@ -4,8 +4,11 @@ import numpy as np
 
 class EvolutionAlg:
     def __init__(self, input_size, output_size):
-        self.input_size = input_size
-        self.output_size = output_size
+        self.feature_dim = 5
+        self.features_count = 10
+        self.preprocessed_dim = 1
+        self.genome_out_params = 6
+        self.output_dim = 6
 
         self.genomes = dict()
 
