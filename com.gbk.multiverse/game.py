@@ -1,15 +1,13 @@
 import numpy as np
 import pygame
 
-from animationManager import AnimationManager
-from entity import Entity
-from world import World
 from camera import Camera
+from animationManager import AnimationManager
+from world import World
+from entity import Entity
 from decoration import Decoration
 from environment import Environment
 from sun import Sun
-
-from evolution import EvolutionAlg
 
 from my_libs import Rect, Vector2D
 
@@ -43,8 +41,6 @@ class Game:
         self.dog_sheet_stay = pygame.image.load(f'{self.res_dirs[0]}Hell-Hound-Files/PNG/hell-hound-idle.png')
         self.dog_sheet_walk = pygame.image.load(f'{self.res_dirs[0]}Hell-Hound-Files/PNG/hell-hound-walk.png')
 
-        self.animation_managers()
-
     def animation_managers(self):
         self.anim_dec = AnimationManager()
         self.anim_hero = AnimationManager()
@@ -75,7 +71,6 @@ class Game:
 
     def new(self):
         self.cam = Camera(screen_size=self.screen_size, coefficient=2)
-
         self.sun = Sun(self.cam.frame.width, self.cam.frame.height)
 
         self.decorations = list()
@@ -103,10 +98,8 @@ class Game:
                                                max_health=1000, id_=self.free_id, family='tree'))
             self.free_id += 1
 
-        return True
-
     def add_entities(self):
-        self.hero = Entity(animanager=self.anim_hero.copy(), position=Vector2D(0, 0), speed=10, max_health=200,
+        self.hero = Entity(animanager=self.anim_hero.copy(), position=Vector2D(500, 200), speed=10, max_health=200,
                            strength=20, id_=self.free_id, family='hero')
         self.hero.ai = False
         self.entities.append(self.hero)
@@ -130,15 +123,11 @@ class Game:
         for ent in self.entities:
             ent.generate_random_priorities(env_states=self.game_env.get_states())
 
-        return True
-
     def run(self):
         clock = pygame.time.Clock()
-
         run = True
         while run:
             clock.tick(self.fps)
-
             time = clock.get_time()
             time = time / 80  # game speed
 
@@ -147,29 +136,23 @@ class Game:
                     run = False
 
             keys = pygame.key.get_pressed()
-
-            self.vci(keys)  # vision controlling and interaction
-
+            self.vci(keys)
             self.update(time)
-
             self.draw()
 
         pygame.quit()
 
+    # vision controlling and interaction
     def vci(self, keys):
         for ent in self.entities:
             # Vision
-            area = Rect(ent.get_rect().left - self.cam.frame.width / 2,
-                        ent.get_rect().top - self.cam.frame.height / 2,
-                        self.cam.frame.width, self.cam.frame.height)
-
+            area = Rect(ent.get_rect().center.x, ent.get_rect().center.y,
+                        self.cam.frame.width, self.cam.frame.height, isCenter=True)
             entities_around = [_ for _ in self.entities if _.get_rect().intersects(area) and not _ is ent]
             decorations_around = [_ for _ in self.decorations if _.get_rect().intersects(area)]
             objects_around = entities_around + decorations_around
-
-            self.game_env.apply(entity=ent, objects_around=objects_around,
-                                world_around=self.game_world.get_world_around(Vector2D(ent.get_rect().center.x,
-                                                                                       ent.get_rect().center.y)))
+            world_around = self.game_world.get_world_around(ent.get_rect().center)
+            self.game_env.apply(entity=ent, objects_around=objects_around, world_around=world_around)
 
             # Controlling
             if not ent.ai:
@@ -178,17 +161,13 @@ class Game:
             ent.interaction(objects_around)
 
     def update(self, time):
-        self.sun.update(time)
-
         for dec in self.decorations:
             dec.update(time)
-
-            if dec.health <= 0:
+            if not dec.alive:
                 self.decorations.remove(dec)
 
         for ent in self.entities:
             ent.update(time)
-
             if not ent.alive:
                 self.entities.remove(ent)
 
@@ -196,31 +175,22 @@ class Game:
                     print('You are dead')
                     exit(1)
 
-        self.cam.update(Vector2D(self.hero.get_rect().center.x, self.hero.get_rect().center.y))
+        self.cam.update(self.hero.get_rect().center)
+        self.sun.update(time)
         pygame.display.update()
 
     def draw(self):
         self.canvas.fill((0, 0, 0))  # Makes black window
 
+        self.game_world.draw(surface=self.canvas, position=self.hero.get_rect().center, camera=self.cam)
         objects = self.decorations + self.entities
-
-        objects.sort(key=lambda obj: obj.get_rect().top)  # sorting objects by y axis  # + obj.height
-
-        self.game_world.draw(surface=self.canvas, scroll=Vector2D(self.cam.frame.left, self.cam.frame.top),
-                             position=Vector2D(self.hero.get_rect().left, self.hero.get_rect().top),
-                             width=self.cam.frame.width / 2 + self.cam.bias,
-                             height=self.cam.frame.height / 2 + self.cam.bias)  # draw map
-
-        draw_area = Rect(self.hero.get_rect().center.x - self.cam.frame.width / 2 - self.cam.bias,  # bias needs to draw
-                         self.hero.get_rect().center.y - self.cam.frame.height / 2 - self.cam.bias,
-                         self.cam.frame.width + self.cam.bias, self.cam.frame.height + self.cam.bias)
-
+        objects.sort(key=lambda obj: obj.get_rect().bottom)  # sorting objects by y axis
         for obj in objects:
-            if obj.get_rect().intersects(draw_area):
-                obj.draw(self.canvas, self.cam.frame)
+            if obj.get_rect().intersects(self.cam.frame):
+                obj.draw(self.canvas, self.cam.get_scroll())
 
-        self.canvas.blit(self.sun.img, (self.hero.get_rect().center.x - self.cam.frame.width / 2 + self.cam.frame.left,
-                                        self.hero.get_rect().center.y - self.cam.frame.height / 2 + self.cam.frame.top))
+        self.canvas.blit(self.sun.img, (self.cam.frame.topleft.x + self.cam.get_scroll().x,
+                                        self.cam.frame.topleft.y + self.cam.get_scroll().y))
 
         self.window.blit(pygame.transform.scale(self.canvas, [self.screen_size.x * self.cam.coefficient,
                                                               self.screen_size.y * self.cam.coefficient]),
@@ -230,5 +200,6 @@ if __name__ == '__main__':
     game = Game(Vector2D(1280, 720), 'Multiverse')
 
     game.include_resources()
+    game.animation_managers()
     game.new()
     game.run()

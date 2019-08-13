@@ -40,14 +40,13 @@ class Object:
 
         if self.health > self.max_health + self.health_bonus:
             self.health = self.max_health + self.health_bonus
-
         if self.health < 0:
             self.health = 0.
 
-    def draw(self, surface, cam_frame):
-        self.animanager.draw(surface, self.get_rect().topleft, cam_frame)
+    def draw(self, surface, cam_scroll):
+        self.animanager.draw(surface, self.get_rect().topleft, cam_scroll)
         self.health_bar.draw(surface, self.health, self.max_health, self.health_bonus,
-                             self.get_rect().center, cam_frame)
+                             self.get_rect().center, cam_scroll)
 
     def get_rect(self):
         animation = self.animanager.get()

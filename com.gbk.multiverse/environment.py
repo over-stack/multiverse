@@ -11,7 +11,6 @@ class Environment:
         return list(self.bonus.keys())
 
     def apply(self, entity, objects_around, world_around):
-        return
         tree_count = 0
         entity_count = 0
         same_entity_count = 0
@@ -20,7 +19,7 @@ class Environment:
             if obj.family == 'tree':
                 tree_count += 1
 
-            if obj.type == 'entity' and obj.id_ != entity.id_:
+            if obj.type_ == 'entity' and obj.id_ != entity.id_:
                 entity_count += 1
                 if obj.family == entity.family:
                     same_entity_count += 1
@@ -29,15 +28,12 @@ class Environment:
 
         if tree_count > 4:
             active_states.add('forest')
-            print('forest')
 
         if entity_count == 0:
             active_states.add('alone')
-            print('alone')
 
         if same_entity_count > 3:
             active_states.add('support')
-            print('support')
 
         if len(active_states) != 0:
             entity.health_bonus = sum(

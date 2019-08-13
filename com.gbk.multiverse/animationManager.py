@@ -16,8 +16,9 @@ class AnimationManager:
         self.animations[name] = Animation(sheet, cols, rows, count, speed, looped)
         self.currentAnimation = name
 
-    def draw(self, surface, topleft, cam_frame):  # position = topleft
-        position = Vector2D(topleft.x + cam_frame.left, topleft.y + cam_frame.top)
+    def draw(self, surface, topleft, cam_scroll):  # position = topleft
+        position = Vector2D(topleft.x + cam_scroll.x,
+                            topleft.y + cam_scroll.y)
 
         anim = self.animations[self.currentAnimation]
         if self.flipped:
