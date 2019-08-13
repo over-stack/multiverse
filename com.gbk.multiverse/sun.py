@@ -1,6 +1,5 @@
 import pygame
 
-
 class Sun:
     def __init__(self, cam_width, cam_height):
         self.img = pygame.Surface((cam_width, cam_height))

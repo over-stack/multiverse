@@ -12,7 +12,6 @@ class Vector2D:
     def get_tuple(self):
         return self.x, self.y
 
-
 class Rect:
     def __init__(self, x, y, width, height, isCenter=False):
         self.width = width
