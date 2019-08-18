@@ -8,8 +8,10 @@ from entity import Entity
 from decoration import Decoration
 from environment import Environment
 from sun import Sun
+from spawn import Spawn
 
 from my_libs import Rect, Vector2D
+
 
 class Game:
     def __init__(self, screen_size, title):
@@ -42,13 +44,13 @@ class Game:
         self.dog_sheet_walk = pygame.image.load(f'{self.res_dirs[0]}Hell-Hound-Files/PNG/hell-hound-walk.png')
 
     def animation_managers(self):
-        self.anim_dec = AnimationManager()
+        self.anim_tree = AnimationManager()
         self.anim_hero = AnimationManager()
         self.anim_dog = AnimationManager()
         self.anim_ghost = AnimationManager()
 
-        self.anim_dec.create(name='stay', sheet=self.tree_sheet_stay,
-                             cols=1, rows=1, count=1, speed=0)
+        self.anim_tree.create(name='stay', sheet=self.tree_sheet_stay,
+                              cols=1, rows=1, count=1, speed=0)
 
         self.anim_hero.create(name='stay', sheet=self.hero_sheet_stay,
                               cols=4, rows=1, count=4, speed=0.2, looped=True)
@@ -77,50 +79,39 @@ class Game:
         self.entities = list()
         self.free_id = 0
 
-        self.environment_settings()
-        self.world_settings()
+        self.game_env = Environment()
+        self.game_world = World(filename=f'{self.res_dirs[1]}tileset.png', size=Vector2D(4000, 4000),
+                                tile_size=Vector2D(16, 16), filepath='map0.txt')
+        self.spawn = Spawn()
         self.add_decorations()
         self.add_entities()
 
-    def environment_settings(self):
-        self.game_env = Environment()
-
-    def world_settings(self):
-        self.game_world = World(filename=f'{self.res_dirs[1]}tileset.png', size=Vector2D(2000, 2000),
-                                tile_size=Vector2D(16, 16), filepath='map0.txt')
-        self.game_world.add_tile(position=Vector2D(208, 288), code='a')  # dirt
-        self.game_world.add_tile(position=Vector2D(368, 400), code='b')  # red
-        self.game_world.add_tile(position=Vector2D(272, 384), code='c')
-        self.game_world.add_tile(position=Vector2D(286, 384), code='d')
-        self.game_world.add_tile(position=Vector2D(302, 384), code='e')  # dirt to red
-        self.game_world.add_tile(position=Vector2D(302, 400), code='f')  # dirt to red
-        self.game_world.add_tile(position=Vector2D(302, 416), code='g')  # red
-        self.game_world.add_tile(position=Vector2D(302, 432), code='h')  # dirt
-        self.game_world.add_tile(position=Vector2D(208, 368), code='1')
-        self.game_world.add_tile(position=Vector2D(240, 368), code='2')
-        self.game_world.add_tile(position=Vector2D(208, 400), code='3')
-        self.game_world.add_tile(position=Vector2D(240, 400), code='4')
-        self.game_world.add_tile(position=Vector2D(208, 432), code='5')
-        self.game_world.add_tile(position=Vector2D(240, 432), code='6')
-
     def add_decorations(self):
+
+        self.decorations.extend(self.spawn.spawn_rect(Rect(300, 300, 2000, 2000),
+                                                      Decoration(animanager=self.anim_tree.copy(),
+                                                                 position=Vector2D(0, 0),
+                                                                 max_health=1000, id_=self.free_id, family='tree'),
+                                                      shift=Vector2D(15, 15)
+                                                      ))
+        self.free_id = self.decorations[-1].id_ + 1
+
         random_positions = np.random.rand(100, 2) * 1000
         for i in range(100):
-            self.decorations.append(Decoration(animanager=self.anim_dec.copy(),
+            self.decorations.append(Decoration(animanager=self.anim_tree.copy(),
                                                position=Vector2D(random_positions[i, 0], random_positions[i, 1]),
                                                max_health=1000, id_=self.free_id, family='tree'))
             self.free_id += 1
 
     def add_entities(self):
-        self.hero = Entity(animanager=self.anim_hero.copy(), position=Vector2D(500, 200), speed=10, max_health=200,
+        self.hero = Entity(animanager=self.anim_hero.copy(), position=Vector2D(500, 500), speed=10, max_health=200,
                            strength=20, id_=self.free_id, family='hero')
         self.hero.ai = False
         self.entities.append(self.hero)
         self.free_id += 1
 
-        dog = Entity(animanager=self.anim_dog.copy(), position=Vector2D(1100, 450), speed=-12, max_health=80,
+        dog = Entity(animanager=self.anim_dog.copy(), position=Vector2D(1100, 550), speed=-12, max_health=80,
                      strength=14, id_=self.free_id, family='dog')
-        dog.acceleration.x = dog.speed / 2
         self.entities.append(dog)
         self.free_id += 1
 

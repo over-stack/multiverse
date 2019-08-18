@@ -1,6 +1,7 @@
 from entity import Entity
 from decoration import Decoration
 
+
 class Environment:
     def __init__(self):
         self.bonus = {'forest': {'health': 10, 'strength': 10, 'satiety': 10},

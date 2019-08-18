@@ -1,8 +1,11 @@
+from copy import deepcopy
+
 import pygame
 
 from animationManager import AnimationManager
 from my_libs import Rect, Vector2D
 import GUI
+
 
 class Object:
     def __init__(self, animanager, position, id_, max_health=100, family='single', type_='object'):
@@ -57,3 +60,6 @@ class Object:
         animation = self.animanager.get(name='stay')
         return Rect(rect.left + animation.shift, rect.bottom - animation.depth,
                     rect.width - 2 * animation.shift, animation.depth)
+
+    def copy(self):
+        return deepcopy(self)

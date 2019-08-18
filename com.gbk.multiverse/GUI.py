@@ -2,6 +2,7 @@ import pygame
 
 from my_libs import Rect, Vector2D
 
+
 class Bar:
     def __init__(self, length, height, width, colors):
         self.length = length

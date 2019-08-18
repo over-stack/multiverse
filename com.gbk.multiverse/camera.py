@@ -1,5 +1,6 @@
 from my_libs import Rect, Vector2D
 
+
 class Camera:
     def __init__(self, screen_size, coefficient):
         self.coefficient = coefficient

@@ -1,9 +1,10 @@
 import random
 import pygame
-from object import Object
 
+from object import Object
 from my_libs import Rect, Vector2D
 import GUI
+
 
 class Entity(Object):
     def __init__(self, animanager, position, speed, max_health, strength, id_, family='single', type_='entity'):

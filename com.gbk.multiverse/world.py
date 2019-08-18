@@ -22,6 +22,21 @@ class World:
         self.heat_map = list()
         self.water_map = list()
 
+        self.add_tile(position=Vector2D(208, 288), code='a')  # dirt
+        self.add_tile(position=Vector2D(368, 400), code='b')  # red
+        self.add_tile(position=Vector2D(272, 384), code='c')
+        self.add_tile(position=Vector2D(286, 384), code='d')
+        self.add_tile(position=Vector2D(302, 384), code='e')  # dirt to red
+        self.add_tile(position=Vector2D(302, 400), code='f')  # dirt to red
+        self.add_tile(position=Vector2D(302, 416), code='g')  # red
+        self.add_tile(position=Vector2D(302, 432), code='h')  # dirt
+        self.add_tile(position=Vector2D(208, 368), code='1')
+        self.add_tile(position=Vector2D(240, 368), code='2')
+        self.add_tile(position=Vector2D(208, 400), code='3')
+        self.add_tile(position=Vector2D(240, 400), code='4')
+        self.add_tile(position=Vector2D(208, 432), code='5')
+        self.add_tile(position=Vector2D(240, 432), code='6')
+
     def generate_world(self):
         map_ = [['a' for _ in range(self.size_in_tiles.x)] for _ in range(self.size_in_tiles.y)]
         for i in range(500):

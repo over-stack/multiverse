@@ -4,6 +4,7 @@ from animation import Animation
 
 from my_libs import Rect, Vector2D
 
+
 class AnimationManager:
 
     def __init__(self):
@@ -39,7 +40,7 @@ class AnimationManager:
         self.lastAnimation = self.currentAnimation
 
     def get(self, name=''):  # name = '' --> current animation
-        if len(name) == 0:
+        if len(name) == 0 or name not in self.animations.keys():
             return self.animations[self.currentAnimation]
         return self.animations[name]
 
