@@ -48,12 +48,12 @@ class Object:
         self.health_bar.draw(surface, self.health, self.max_health, self.health_bonus,
                              self.get_rect().center, cam_scroll)
 
-    def get_rect(self):
-        animation = self.animanager.get()
+    def get_rect(self, name=''):
+        animation = self.animanager.get(name)
         return Rect(self.position.x, self.position.y, animation.width, animation.height, isCenter=True)
 
     def get_collision_rect(self):
-        rect = self.get_rect()
-        animation = self.animanager.get()
+        rect = self.get_rect('stay')
+        animation = self.animanager.get(name='stay')
         return Rect(rect.left + animation.shift, rect.bottom - animation.depth,
                     rect.width - 2 * animation.shift, animation.depth)

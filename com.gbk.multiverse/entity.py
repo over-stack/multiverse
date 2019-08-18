@@ -42,34 +42,39 @@ class Entity(Object):
         for i in range(len(env_states)):
             self.priorities[env_states[i]] = nums[i]
 
-    def control(self, keys):
+    def control(self, keys, time, objects_around):
         if self.state != 'death':
-            self.keys_pressed(keys)
-            self.keys_released(keys)
+            self.keys_pressed(keys, time)
+            self.keys_released(keys, time)
 
-    def keys_pressed(self, keys):
+        self.collision(objects_around, Vector2D(self.acceleration.x, 0))
+        self.collision(objects_around, Vector2D(0, self.acceleration.y))
+
+        self.interaction(objects_around)
+
+    def keys_pressed(self, keys, time):
         if keys[pygame.K_d]:
             if not self.busy:
-                self.acceleration.x = self.speed
+                self.acceleration.x = self.speed * time
                 self.state = 'walk'
 
                 self.animanager.flip(False)
 
         if keys[pygame.K_a]:
             if not self.busy:
-                self.acceleration.x = -self.speed
+                self.acceleration.x = -self.speed * time
                 self.state = 'walk'
 
                 self.animanager.flip(True)
 
         if keys[pygame.K_w]:
             if not self.busy:
-                self.acceleration.y = -self.speed
+                self.acceleration.y = -self.speed * time
                 self.state = 'walk'
 
         if keys[pygame.K_s]:
             if not self.busy:
-                self.acceleration.y = self.speed
+                self.acceleration.y = self.speed * time
                 self.state = 'walk'
 
         if keys[pygame.K_SPACE]:
@@ -84,7 +89,7 @@ class Entity(Object):
                 self.busy = True
                 self.request = True
 
-    def keys_released(self, keys):
+    def keys_released(self, keys, time):
         if not (keys[pygame.K_d] or keys[pygame.K_a] or keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_SPACE]):
             if not self.busy:
                 self.acceleration.x = 0
@@ -114,72 +119,29 @@ class Entity(Object):
                 self.busy = False
 
     # Do after control and before update
-    def collision(self, objects):
+    def collision(self, objects, acceleration):
         if not self.collision:
             return
 
+        self.position += acceleration
         collision_rect = self.get_collision_rect()
-        for object in objects:
-            if not object.isCollision or self.id_ == object.id_:
+
+        for object_ in objects:
+            if not object_.isCollision or self.id_ == object_.id_:
                 continue
-            object_collision_rect = object.get_collision_rect()
-            moving = Vector2D(0, 0)
+            object_collision_rect = object_.get_collision_rect()
+            if not collision_rect.intersects(object_collision_rect):
+                continue
 
-            # If we go Right
-            if (collision_rect.right >= object_collision_rect.left) and \
-                    (collision_rect.left <= object_collision_rect.left):  # <= => not < > because of angles
-                if (collision_rect.bottom > object_collision_rect.top) and \
-                        (collision_rect.top < object_collision_rect.bottom):  # < > not <= >= because of teleporting
-                    if self.acceleration.x > 0:
-                        self.acceleration.x = 0
-                        moving.x = object_collision_rect.left - collision_rect.right
+            if acceleration.x > 0:
+                self.position.x += object_collision_rect.left - collision_rect.right
+            elif acceleration.x < 0:
+                self.position.x += object_collision_rect.right - collision_rect.left
 
-            # Left
-            if (collision_rect.left <= object_collision_rect.right) and \
-                    (collision_rect.right >= object_collision_rect.right):
-                if (collision_rect.bottom > object_collision_rect.top) and \
-                        (collision_rect.top < object_collision_rect.bottom):
-                    if self.acceleration.x < 0:
-                        self.acceleration.x = 0
-                        moving.x = object_collision_rect.right - collision_rect.left
-
-            # Bottom
-            if (collision_rect.bottom >= object_collision_rect.top) and \
-                    (collision_rect.top <= object_collision_rect.top):
-                if (collision_rect.right > object_collision_rect.left) and \
-                        (collision_rect.left < object_collision_rect.right):
-                    if self.acceleration.y > 0:
-                        self.acceleration.y = 0
-                        moving.y = object_collision_rect.top - collision_rect.bottom
-
-            # Top
-            if (collision_rect.top <= object_collision_rect.bottom) and \
-                    (collision_rect.bottom >= object_collision_rect.bottom):
-                if (collision_rect.right > object_collision_rect.left) and \
-                        (collision_rect.left < object_collision_rect.right):
-                    if self.acceleration.y < 0:
-                        self.acceleration.y = 0
-                        moving.y = object_collision_rect.bottom - collision_rect.top
-
-            self.position += moving
-
-    def update(self, time):
-        Object.update(self, time)
-
-        self.position.x += self.acceleration.x * time
-        self.position.y += self.acceleration.y * time
-
-        if self.satiety > 0:
-            self.satiety -= self.satiety_speed
-        else:
-            self.satiety = 0.
-            self.health -= self.satiety_damage
-
-        if self.satiety > self.max_satiety + self.satiety_bonus:
-            self.satiety = self.max_satiety + self.satiety_bonus
-
-        if self.satiety > self.min_satiety:
-            self.health += self.regeneration_speed + self.regeneration_speed_bonus
+            if acceleration.y > 0:
+                self.position.y += object_collision_rect.top - collision_rect.bottom
+            elif acceleration.y < 0:
+                self.position.y += object_collision_rect.bottom - collision_rect.top
 
     def interaction(self, objects_around):
         if not (self.busy and self.request):
@@ -201,6 +163,21 @@ class Entity(Object):
                             self.satiety += 20  # vampire
 
         self.request = False
+
+    def update(self, time):
+        Object.update(self, time)
+
+        if self.satiety > 0:
+            self.satiety -= self.satiety_speed
+        else:
+            self.satiety = 0.
+            self.health -= self.satiety_damage
+
+        if self.satiety > self.max_satiety + self.satiety_bonus:
+            self.satiety = self.max_satiety + self.satiety_bonus
+
+        if self.satiety > self.min_satiety:
+            self.health += self.regeneration_speed + self.regeneration_speed_bonus
 
     def draw(self, surface, cam_frame):
         Object.draw(self, surface, cam_frame)

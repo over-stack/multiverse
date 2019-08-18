@@ -12,6 +12,7 @@ class Vector2D:
     def get_tuple(self):
         return self.x, self.y
 
+
 class Rect:
     def __init__(self, x, y, width, height, isCenter=False):
         self.width = width
@@ -23,11 +24,10 @@ class Rect:
 
     def intersects(self, rect):
         intersects = True
-        if self.top > rect.bottom or self.bottom < rect.top:
+        if self.top >= rect.bottom or self.bottom <= rect.top:
             intersects = False
-        elif self.right < rect.left or self.left > rect.right:
+        elif self.right <= rect.left or self.left >= rect.right:
             intersects = False
-
         return intersects
 
     def move(self, x, y):

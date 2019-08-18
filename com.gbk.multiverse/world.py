@@ -1,31 +1,45 @@
+import random
+import numpy as np
 from pygame import image, Rect
 import pygame
 
 from my_libs import Rect, Vector2D
 
 class World:
-    def __init__(self, filename, size, tile_size):
+    def __init__(self, filename, size, tile_size, filepath=''):
         self.image = image.load(filename)
         self.size = size
         self.size_in_tiles = Vector2D(size.x // tile_size.x, size.y // tile_size.y)
         self.tile_size = tile_size
-        self.matrix = self.generate_matrix()
+        filepath = ''
+        if len(filepath) == 0:
+            filepath = self.generate_world()
+        with open(filepath, 'r') as f:
+            self.matrix = f.readlines()
+
         self.tiles = dict()
 
         self.heat_map = list()
         self.water_map = list()
 
     def generate_world(self):
-        pass
+        map_ = [['a' for _ in range(self.size_in_tiles.x)] for _ in range(self.size_in_tiles.y)]
+        for i in range(500):
+            choice = Vector2D(random.randint(2, self.size_in_tiles.x - 1), random.randint(2, self.size_in_tiles.y - 1))
+            map_[choice.y][choice.x] = 'b'
+            map_[choice.y - 2][choice.x - 2] = 'c'
+            map_[choice.y - 2][choice.x - 1] = 'd'
+        map_ = [''.join(i) + '\n' for i in map_]
+        with open('map0.txt', 'w') as f:
+            f.writelines(map_)
+
+        return 'map0.txt'
 
     def get_world_around(self, position):
         pass
 
     def add_tile(self, position, code):
         self.tiles[code] = position
-
-    def generate_matrix(self):
-        return [[0 for _ in range(self.size_in_tiles.x)] for _ in range(self.size_in_tiles.y)]
 
     def draw(self, surface, position, camera):
         rect = Rect(position.x // self.tile_size.x, position.y // self.tile_size.y,

@@ -87,12 +87,25 @@ class Game:
 
     def world_settings(self):
         self.game_world = World(filename=f'{self.res_dirs[1]}tileset.png', size=Vector2D(2000, 2000),
-                                tile_size=Vector2D(16, 16))
-        self.game_world.add_tile(position=Vector2D(208, 288), code=0)
+                                tile_size=Vector2D(16, 16), filepath='map0.txt')
+        self.game_world.add_tile(position=Vector2D(208, 288), code='a')  # dirt
+        self.game_world.add_tile(position=Vector2D(368, 400), code='b')  # red
+        self.game_world.add_tile(position=Vector2D(272, 384), code='c')
+        self.game_world.add_tile(position=Vector2D(286, 384), code='d')
+        self.game_world.add_tile(position=Vector2D(302, 384), code='e')  # dirt to red
+        self.game_world.add_tile(position=Vector2D(302, 400), code='f')  # dirt to red
+        self.game_world.add_tile(position=Vector2D(302, 416), code='g')  # red
+        self.game_world.add_tile(position=Vector2D(302, 432), code='h')  # dirt
+        self.game_world.add_tile(position=Vector2D(208, 368), code='1')
+        self.game_world.add_tile(position=Vector2D(240, 368), code='2')
+        self.game_world.add_tile(position=Vector2D(208, 400), code='3')
+        self.game_world.add_tile(position=Vector2D(240, 400), code='4')
+        self.game_world.add_tile(position=Vector2D(208, 432), code='5')
+        self.game_world.add_tile(position=Vector2D(240, 432), code='6')
 
     def add_decorations(self):
-        random_positions = np.random.rand(20, 2) * 1000
-        for i in range(20):
+        random_positions = np.random.rand(100, 2) * 1000
+        for i in range(100):
             self.decorations.append(Decoration(animanager=self.anim_dec.copy(),
                                                position=Vector2D(random_positions[i, 0], random_positions[i, 1]),
                                                max_health=1000, id_=self.free_id, family='tree'))
@@ -111,7 +124,7 @@ class Game:
         self.entities.append(dog)
         self.free_id += 1
 
-        random_positions = np.random.rand(10, 2) * 1000
+        random_positions = np.random.rand(20, 2) * 1000
         for i in range(1):
             self.entities.append(Entity(animanager=self.anim_ghost.copy(),
                                         position=Vector2D(random_positions[i, 0], random_positions[i, 1]),
@@ -136,14 +149,14 @@ class Game:
                     run = False
 
             keys = pygame.key.get_pressed()
-            self.vci(keys)
+            self.vci(keys, time)
             self.update(time)
             self.draw()
 
         pygame.quit()
 
     # vision controlling and interaction
-    def vci(self, keys):
+    def vci(self, keys, time):
         for ent in self.entities:
             # Vision
             area = Rect(ent.get_rect().center.x, ent.get_rect().center.y,
@@ -156,9 +169,7 @@ class Game:
 
             # Controlling
             if not ent.ai:
-                ent.control(keys)
-            ent.collision(self.entities + self.decorations)
-            ent.interaction(objects_around)
+                ent.control(keys, time, objects_around)
 
     def update(self, time):
         for dec in self.decorations:

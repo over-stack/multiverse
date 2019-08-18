@@ -38,8 +38,10 @@ class AnimationManager:
             self.animations[self.lastAnimation].currentFrame = 0
         self.lastAnimation = self.currentAnimation
 
-    def get(self):
-        return self.animations[self.currentAnimation]
+    def get(self, name=''):  # name = '' --> current animation
+        if len(name) == 0:
+            return self.animations[self.currentAnimation]
+        return self.animations[name]
 
     def flip(self, flipped):
         self.flipped = flipped
