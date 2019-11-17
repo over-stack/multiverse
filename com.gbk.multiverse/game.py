@@ -9,6 +9,8 @@ from decoration import Decoration
 from environment import Environment
 from sun import Sun
 from spawn import Spawn
+from encoder import Encoder
+from evolution import Evolution, EvolutionExample
 
 from my_libs import Rect, Vector2D
 
@@ -26,106 +28,119 @@ class Game:
 
         pygame.display.set_caption(title)
 
-    def include_resources(self):
-        self.res_dirs = ('resources/gothicvania patreon collection/',
-                         'resources/tiny-RPG-forest-files/PNG/environment/')
-
-        self.tree_sheet_stay = pygame.image.load(f'{self.res_dirs[1]}/sliced-objects/tree-pink.png')
-
-        self.hero_sheet_stay = pygame.image.load(f'{self.res_dirs[0]}Gothic-hero-Files/PNG/gothic-hero-idle.png')
-        self.hero_sheet_attack = pygame.image.load(f'{self.res_dirs[0]}Gothic-hero-Files/PNG/gothic-hero-attack.png')
-        self.hero_sheet_run = pygame.image.load(f'{self.res_dirs[0]}Gothic-hero-Files/PNG/gothic-hero-run.png')
-
-        self.ghost_sheet_stay = pygame.image.load(f'{self.res_dirs[0]}Ghost-Files/PNG/ghost-idle.png')
-        self.ghost_sheet_walk = pygame.image.load(f'{self.res_dirs[0]}Ghost-Files/PNG/ghost-shriek.png')
-        self.ghost_sheet_death = pygame.image.load(f'{self.res_dirs[0]}Ghost-Files/PNG/ghost-vanish.png')
-
-        self.dog_sheet_stay = pygame.image.load(f'{self.res_dirs[0]}Hell-Hound-Files/PNG/hell-hound-idle.png')
-        self.dog_sheet_walk = pygame.image.load(f'{self.res_dirs[0]}Hell-Hound-Files/PNG/hell-hound-walk.png')
-
-    def animation_managers(self):
-        self.anim_tree = AnimationManager()
-        self.anim_hero = AnimationManager()
-        self.anim_dog = AnimationManager()
-        self.anim_ghost = AnimationManager()
-
-        self.anim_tree.create(name='stay', sheet=self.tree_sheet_stay,
-                              cols=1, rows=1, count=1, speed=0)
-
-        self.anim_hero.create(name='stay', sheet=self.hero_sheet_stay,
-                              cols=4, rows=1, count=4, speed=0.2, looped=True)
-        self.anim_hero.create(name='attack', sheet=self.hero_sheet_attack,
-                              cols=6, rows=1, count=6, speed=0.9)
-        self.anim_hero.create(name='walk', sheet=self.hero_sheet_run,
-                              cols=12, rows=1, count=12, speed=0.9, looped=True)
-
-        self.anim_ghost.create(name='stay', sheet=self.ghost_sheet_stay,
-                               cols=7, rows=1, count=7, speed=0.5, looped=True)
-        self.anim_ghost.create(name='attack', sheet=self.ghost_sheet_walk,
-                               cols=4, rows=1, count=4, speed=0.5, looped=False)
-        self.anim_ghost.create(name='death', sheet=self.ghost_sheet_death,
-                               cols=7, rows=1, count=7, speed=0.5, looped=False)
-
-        self.anim_dog.create(name='stay', sheet=self.dog_sheet_stay,
-                             cols=6, rows=1, count=6, speed=0.5, looped=True)
-        self.anim_dog.create(name='walk', sheet=self.dog_sheet_walk,
-                             cols=12, rows=1, count=12, speed=0.5, looped=True)
-
-    def new(self):
-        self.cam = Camera(screen_size=self.screen_size, coefficient=2)
-        self.sun = Sun(self.cam.frame.width, self.cam.frame.height)
-
+        self.resources = dict()
+        self.sheets = dict()
+        self.animanagers = dict()
+        self.examples = dict()
         self.decorations = list()
         self.entities = list()
-        self.free_id = 0
 
+        self.include_resources()
+        self.animation_managers()
+
+        self.cam = Camera(screen_size=self.screen_size, coefficient=2)
+        self.spawn = Spawn({'decorations': self.decorations, 'entities': self.entities})
         self.game_env = Environment()
-        self.game_world = World(filename=f'{self.res_dirs[1]}tileset.png', size=Vector2D(4000, 4000),
-                                tile_size=Vector2D(16, 16), filepath='map0.txt')
-        self.spawn = Spawn()
+        self.game_world = World(filename=f'{self.resources["tiny-rpg"]}tileset.png', size=Vector2D(1000, 1000),
+                                tile_size=Vector2D(16, 16))
+        self.game_world.load_map(self.game_world.generate_world())
+        self.sun = Sun(self.cam.frame.width, self.cam.frame.height)
+
+        self.add_examples()
+        self.encoder = Encoder(self.game_world.tile_size, Vector2D(self.cam.frame.width, self.cam.frame.height),
+                               self.examples.values())
+        self.evolution = Evolution(self.spawn, self.game_world.get_codes() + self.encoder.get_codes())
         self.add_decorations()
         self.add_entities()
 
+    def include_resources(self):
+        self.resources['goth'] = 'resources/gothicvania patreon collection/'
+        self.resources['tiny-rpg'] = 'resources/tiny-RPG-forest-files/PNG/environment/'
+
+        self.sheets['tree'] = dict()
+        self.sheets['tree']['stay'] = pygame.image.load(f'{self.resources["tiny-rpg"]}/sliced-objects/tree-pink.png')
+
+        self.sheets['hero'] = dict()
+        self.sheets['hero']['stay'] = pygame.image.load(
+            f'{self.resources["goth"]}Gothic-hero-Files/PNG/gothic-hero-idle.png')
+        self.sheets['hero']['attack'] = pygame.image.load(
+            f'{self.resources["goth"]}Gothic-hero-Files/PNG/gothic-hero-attack.png')
+        self.sheets['hero']['run'] = pygame.image.load(
+            f'{self.resources["goth"]}Gothic-hero-Files/PNG/gothic-hero-run.png')
+
+        self.sheets['ghost'] = dict()
+        self.sheets['ghost']['stay'] = pygame.image.load(f'{self.resources["goth"]}Ghost-Files/PNG/ghost-idle.png')
+        self.sheets['ghost']['walk'] = pygame.image.load(f'{self.resources["goth"]}Ghost-Files/PNG/ghost-shriek.png')
+        self.sheets['ghost']['death'] = pygame.image.load(f'{self.resources["goth"]}Ghost-Files/PNG/ghost-vanish.png')
+
+        self.sheets['dog'] = dict()
+        self.sheets['dog']['stay'] = pygame.image.load(
+            f'{self.resources["goth"]}Hell-Hound-Files/PNG/hell-hound-idle.png')
+        self.sheets['dog']['walk'] = pygame.image.load(
+            f'{self.resources["goth"]}Hell-Hound-Files/PNG/hell-hound-walk.png')
+
+    def animation_managers(self):
+        self.animanagers['tree'] = AnimationManager()
+        self.animanagers['tree'].create(name='stay', sheet=self.sheets['tree']['stay'],
+                              cols=1, rows=1, count=1, speed=0)
+
+        self.animanagers['hero'] = AnimationManager()
+        self.animanagers['hero'].create(name='stay', sheet=self.sheets['hero']['stay'],
+                              cols=4, rows=1, count=4, speed=0.2, looped=True)
+        self.animanagers['hero'].create(name='attack', sheet=self.sheets['hero']['attack'],
+                                        cols=6, rows=1, count=6, speed=0.9)
+        self.animanagers['hero'].create(name='walk', sheet=self.sheets['hero']['run'],
+                                        cols=12, rows=1, count=12, speed=0.9, looped=True)
+
+        self.animanagers['ghost'] = AnimationManager()
+        self.animanagers['ghost'].create(name='stay', sheet=self.sheets['ghost']['stay'],
+                               cols=7, rows=1, count=7, speed=0.5, looped=True)
+        self.animanagers['ghost'].create(name='attack', sheet=self.sheets['ghost']['walk'],
+                                         cols=4, rows=1, count=4, speed=0.5, looped=False)
+        self.animanagers['ghost'].create(name='death', sheet=self.sheets['ghost']['death'],
+                                         cols=7, rows=1, count=7, speed=0.5, looped=False)
+
+        self.animanagers['dog'] = AnimationManager()
+        self.animanagers['dog'].create(name='stay', sheet=self.sheets['dog']['stay'],
+                             cols=6, rows=1, count=6, speed=0.5, looped=True)
+        self.animanagers['dog'].create(name='walk', sheet=self.sheets['dog']['walk'],
+                                       cols=12, rows=1, count=12, speed=0.5, looped=True)
+
+    def add_examples(self):
+        tree = Decoration(animanager=self.animanagers['tree'], position=Vector2D(0, 0),
+                          max_health=1000, family='tree')
+        self.examples['tree'] = tree
+
+        hero = Entity(animanager=self.animanagers['hero'], position=Vector2D(500, 500), speed=10, max_health=200,
+                      strength=20, family='hero')
+        hero.ai = False
+        self.examples['hero'] = hero
+
+        dog = Entity(animanager=self.animanagers['dog'], position=Vector2D(1100, 550), speed=-12, max_health=80,
+                     strength=14, family='dog')
+        dog.acting = False
+        dog.ai = False
+        self.examples['dog'] = dog
+
+        ghost = Entity(animanager=self.animanagers['ghost'], position=Vector2D(0, 0), speed=10, max_health=200,
+                       strength=20, family='ghost')
+        self.examples['ghost'] = ghost
+
+        for example in self.examples.values():
+            if example.type_ == 'entity':
+                example.generate_random_priorities(env_states=self.game_env.get_states())
+
     def add_decorations(self):
-
-        self.decorations.extend(self.spawn.spawn_rect(Rect(300, 300, 2000, 2000),
-                                                      Decoration(animanager=self.anim_tree.copy(),
-                                                                 position=Vector2D(0, 0),
-                                                                 max_health=1000, id_=self.free_id, family='tree'),
-                                                      shift=Vector2D(15, 15)
-                                                      ))
-        self.free_id = self.decorations[-1].id_ + 1
-
-        random_positions = np.random.rand(100, 2) * 1000
-        for i in range(100):
-            self.decorations.append(Decoration(animanager=self.anim_tree.copy(),
-                                               position=Vector2D(random_positions[i, 0], random_positions[i, 1]),
-                                               max_health=1000, id_=self.free_id, family='tree'))
-            self.free_id += 1
+        self.spawn.spawn_rect(container_name='decorations', rect=self.game_world.get_area(),
+                              obj=self.examples['tree'], shift=None)
+        self.spawn.spawn_random(container_name='decorations', count=50, area=self.game_world.get_area(),
+                                obj=self.examples['tree'], shift=Vector2D(15, 15))
 
     def add_entities(self):
-        self.hero = Entity(animanager=self.anim_hero.copy(), position=Vector2D(500, 500), speed=10, max_health=200,
-                           strength=20, id_=self.free_id, family='hero')
-        self.hero.ai = False
-        self.entities.append(self.hero)
-        self.free_id += 1
-
-        dog = Entity(animanager=self.anim_dog.copy(), position=Vector2D(1100, 550), speed=-12, max_health=80,
-                     strength=14, id_=self.free_id, family='dog')
-        self.entities.append(dog)
-        self.free_id += 1
-
-        random_positions = np.random.rand(20, 2) * 1000
-        for i in range(1):
-            self.entities.append(Entity(animanager=self.anim_ghost.copy(),
-                                        position=Vector2D(random_positions[i, 0], random_positions[i, 1]),
-                                        speed=10, max_health=200, strength=20, id_=self.free_id,
-                                        family='ghost'))
-            self.entities[-1].id_ = self.free_id
-            self.free_id += 1
-
-        for ent in self.entities:
-            ent.generate_random_priorities(env_states=self.game_env.get_states())
+        self.hero = self.spawn.spawn('entities', self.examples['hero'], return_obj=True)
+        self.spawn.spawn('entities', self.examples['dog'])
+        self.evolution.add_example('ghost', EvolutionExample(self.examples['ghost'], min_=2, max_=4,
+                                                             area=self.game_world.get_area()))
 
     def run(self):
         clock = pygame.time.Clock()
@@ -139,28 +154,36 @@ class Game:
                 if event.type == pygame.QUIT:
                     run = False
 
-            keys = pygame.key.get_pressed()
-            self.vci(keys, time)
+            self.vci(time)
             self.update(time)
             self.draw()
 
         pygame.quit()
 
     # vision controlling and interaction
-    def vci(self, keys, time):
+    def vci(self, time):
         for ent in self.entities:
+            if not ent.acting:
+                continue
             # Vision
             area = Rect(ent.get_rect().center.x, ent.get_rect().center.y,
                         self.cam.frame.width, self.cam.frame.height, isCenter=True)
-            entities_around = [_ for _ in self.entities if _.get_rect().intersects(area) and not _ is ent]
+            entities_around = [_ for _ in self.entities if _.get_rect().intersects(area) and _ is not ent]
             decorations_around = [_ for _ in self.decorations if _.get_rect().intersects(area)]
             objects_around = entities_around + decorations_around
-            world_around = self.game_world.get_world_around(ent.get_rect().center)
-            self.game_env.apply(entity=ent, objects_around=objects_around, world_around=world_around)
+            world_around = self.game_world.get_world_around(ent.get_rect().center, self.cam)
+            self.game_env.apply(entity=ent, objects_around=objects_around, world_around=None)
 
             # Controlling
             if not ent.ai:
-                ent.control(keys, time, objects_around)
+                keys = pygame.key.get_pressed()
+                if keys[pygame.K_ESCAPE]:
+                    quit(0)
+            else:
+                features = self.encoder.encode(world_around, objects_around, ent.get_rect().center)
+                keys = self.evolution.action(ent.id_, features)
+
+            ent.control(keys, time, objects_around)
 
     def update(self, time):
         for dec in self.decorations:
@@ -171,12 +194,14 @@ class Game:
         for ent in self.entities:
             ent.update(time)
             if not ent.alive:
+                self.evolution.delete_entity(ent.id_)
                 self.entities.remove(ent)
 
                 if not ent.ai:
                     print('You are dead')
                     exit(1)
 
+        self.evolution.update(time)
         self.cam.update(self.hero.get_rect().center)
         self.sun.update(time)
         pygame.display.update()
@@ -200,8 +225,4 @@ class Game:
 
 if __name__ == '__main__':
     game = Game(Vector2D(1280, 720), 'Multiverse')
-
-    game.include_resources()
-    game.animation_managers()
-    game.new()
     game.run()

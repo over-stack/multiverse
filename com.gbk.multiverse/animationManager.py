@@ -25,11 +25,11 @@ class AnimationManager:
         if self.flipped:
             surface.blit(transform.flip(anim.sheet, True, False),
                          (position.x, position.y),
-                         anim.frames[int(anim.currentFrame)].get_tuple())
+                         anim.frames[min(int(anim.currentFrame), anim.count - 1)].get_tuple())
         else:
             surface.blit(anim.sheet,
                          (position.x, position.y),
-                         anim.frames[int(anim.currentFrame)].get_tuple())
+                         anim.frames[min(int(anim.currentFrame), anim.count - 1)].get_tuple())
 
     def set(self, name):
         if name not in self.animations.keys():

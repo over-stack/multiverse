@@ -7,8 +7,8 @@ import GUI
 
 
 class Entity(Object):
-    def __init__(self, animanager, position, speed, max_health, strength, id_, family='single', type_='entity'):
-        Object.__init__(self, animanager, position, id_, max_health, family, type_)
+    def __init__(self, animanager, position, speed, max_health, strength, family='single', type_='entity'):
+        Object.__init__(self, animanager, position, max_health, family, type_)
 
         self.speed = speed
         self.acceleration = Vector2D(0, 0)
@@ -18,7 +18,7 @@ class Entity(Object):
         self.satiety_speed = 0.05
         self.satiety_damage = 0.05
         self.min_satiety = 25  # min amount satiety for regeneration
-        self.attack_area_size = Vector2D(40, 40)
+        self.attack_area_size = Vector2D(30, 20)
 
         self.speed_bonus = 0
         self.strength_bonus = 0
@@ -27,10 +27,11 @@ class Entity(Object):
 
         self.busy = False
         self.request = False  # request for action
+        self.acting = True
         self.ai = True
 
         self.satiety_bar = GUI.Bar(self.get_rect().width, self.get_rect().height, 2,
-                                   {75: (0, 0, 255), 25: (0, 255, 255), 0: (100, 100, 50)})
+                                   {0: (105, 17, 17)})
 
         self.priorities = dict()
 
@@ -119,14 +120,12 @@ class Entity(Object):
                 self.state = 'stay'
                 self.busy = False
 
-    # Do after control and before update
     def collision(self, objects, acceleration):
-        if not self.collision:
+        self.position += acceleration
+        if not self.isCollision:
             return
 
-        self.position += acceleration
         collision_rect = self.get_collision_rect()
-
         for object_ in objects:
             if not object_.isCollision or self.id_ == object_.id_:
                 continue
@@ -151,10 +150,13 @@ class Entity(Object):
         if self.state == 'attack':
             if self.animanager.get_elapsed_time() < 0.6:
                 return
-            area = Rect(self.get_rect().left + self.get_rect().width, self.get_rect().top,
-                        self.attack_area_size.x, self.attack_area_size.y)
-            if self.animanager.flipped:
-                area.left -= self.get_rect().width + self.attack_area_size.x
+            rect = self.get_rect(toDraw=False)
+            if not self.animanager.flipped:
+                area = Rect(rect.right, rect.top,
+                            self.attack_area_size.x, self.attack_area_size.y)
+            else:
+                area = Rect(rect.left - self.attack_area_size.x, rect.top,
+                            self.attack_area_size.x, self.attack_area_size.y)
 
             for obj in objects_around:
                 if self.id_ != obj.id_:
@@ -169,17 +171,19 @@ class Entity(Object):
         Object.update(self, time)
 
         if self.satiety > 0:
-            self.satiety -= self.satiety_speed
+            self.satiety -= self.satiety_speed * time
         else:
             self.satiety = 0.
-            self.health -= self.satiety_damage
+            self.health -= self.satiety_damage * time
 
         if self.satiety > self.max_satiety + self.satiety_bonus:
             self.satiety = self.max_satiety + self.satiety_bonus
 
         if self.satiety > self.min_satiety:
-            self.health += self.regeneration_speed + self.regeneration_speed_bonus
+            self.health += (self.regeneration_speed + self.regeneration_speed_bonus) * time
 
     def draw(self, surface, cam_frame):
         Object.draw(self, surface, cam_frame)
+        if not self.visible:
+            return
         self.satiety_bar.draw(surface, self.satiety, self.max_satiety, self.satiety_bonus, self.position, cam_frame)

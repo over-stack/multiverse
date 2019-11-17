@@ -1,3 +1,9 @@
+import string
+
+MAP_SYMBOLS = list(filter(lambda x: x not in string.ascii_letters, string.printable))
+OBJECT_SYMBOLS = list(string.ascii_lowercase)
+
+
 class Vector2D:
     def __init__(self, x, y):
         self.x = x

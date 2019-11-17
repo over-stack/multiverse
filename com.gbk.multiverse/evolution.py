@@ -1,60 +1,81 @@
+from copy import deepcopy
 import random
 import numpy as np
+from entity import Entity
+from spawn import Spawn
+from genome import Genome
+
+COUNT_OF_BUTTONS = 323
 
 
-class EvolutionAlg:
-    def __init__(self, input_size, output_size):
-        self.feature_dim = 5
-        self.features_count = 10
-        self.preprocessed_dim = 1
-        self.genome_out_params = 6
-        self.output_dim = 6
+class EvolutionExample:
+    def __init__(self, entity, min_, max_, area):
+        self.entity = entity
+        self.min_ = min_
+        self.max_ = max_
+        self.area = area  # spawn-area
 
+
+class Evolution:
+    def __init__(self, spawn, codes):
+        self.spawn = spawn
+        self.codes = codes
+        self.encoder = dict()
+        for i in range(len(self.codes)):
+            self.encoder[codes[i]] = i / len(self.codes)
+        self.examples = dict()
         self.genomes = dict()
+        self.layers = [880, 5]
+        self.buttons = {0: ' ', 1: 'a', 2: 'w', 3: 'd', 4: 's'}
 
-    def generate_population(self, ids):
+    def add_example(self, name, example):
+        self.examples[name] = example
+        self.genomes[name] = dict()
+
+    def delete_example(self, name):
+        del self.examples[name]
+
+    def generate(self, example_name, count, nextgen=False):
+        example = self.examples[example_name]
+        ids = self.spawn.spawn_random('entities', count, example.area, example.entity, return_id=True)
         for id_ in ids:
-            self.genomes[id_] = self.generate_genome()
+            if not nextgen:
+                self.genomes[example_name][id_] = Genome(self.layers)
+            else:
+                new_genome = random.choice(list(self.genomes[example_name].values())).copy()
+                new_genome.mutation()
+                self.genomes[example_name][id_] = new_genome
 
-    def generate_genome(self):
-        return 2 * np.random.rand(self.input_size, self.output_size) - 1
+    def delete_entity(self, id_):
+        for example_name in self.genomes:
+            if id_ in self.genomes[example_name]:
+                del self.genomes[example_name][id_]
+                return
 
-    def generate_gen(self):
-        return 2 * np.random.rand(1)[0] - 1
+    def update(self, time):
+        for example_name in self.genomes:
+            example = self.examples[example_name]
+            survived = len(self.genomes[example_name])
+            print(f'survived: {survived}')
+            if survived == 0:
+                self.generate(example_name, example.max_ - survived)
+            elif survived < example.min_:
+                self.generate(example_name, example.max_ - survived, nextgen=True)
 
-    def crossover(self, pair, free_id):
-        choice = self.make_choice()
-        self.genomes[free_id] = self.genomes[pair[0]].copy()
-        self.genomes[free_id][:choice[0], :choice[1]] = self.genomes[pair[1]][:choice[0], :choice[1]].copy()
+    def action(self, id_, features):
+        for example_name in self.genomes:
+            if id_ in self.genomes[example_name]:
+                keys = [0 for i in range(COUNT_OF_BUTTONS)]
+                result = self.genomes[example_name][id_].evaluate(self.encode_features(features))
+                for r in result:
+                    keys[ord(self.buttons[r])] = 1
+                return keys
 
-    def mutation(self, id_):
-        choice = self.make_choice()
-        self.genomes[id_][choice[0], choice[1]] = self.generate_gen()
-
-    def inversion(self, id_):
-        choice = self.make_choice()
-        pass
-
-    def make_decision(self, features, id_):
-        features = np.array(features)
-        result = self.sigmoid(features.dot(self.genomes[id_]))
-        return np.argmax(result)
-
-    def save_genome(self, filename, id_):  # Check
-        with open(filename, 'w') as f:
-            f.writelines(self.genomes[id_])
-
-    def load_genome(self, filename, id_):  # Add formatting
-        with open(filename, 'r') as f:
-            self.genomes[id_] = f.readlines()
-
-    def sigmoid(self, x):
-        return 1 / (1 + np.exp(-x))
-
-    def distance(self, position1, position2):
-        return ((position2[0] - position1[0]) ** 2 + (position2[1] - position1[1]) ** 2) ** 0.5
-
-    def make_choice(self):
-        choice = [int(random.uniform(0, 1) * self.input_size),
-                  int(random.uniform(0, 1) * self.output_size)]
-        return choice
+    def encode_features(self, features):
+        features = [[self.encoder[j] for j in features[i]] for i in range(len(features))]
+        # print(self.codes)
+        # for i in range(len(features)):
+        # for j in range(len(features[i])):
+        # print(features[i][j], ': ', end=' ')
+        # print(self.encoder[features[i][j]])
+        return features
