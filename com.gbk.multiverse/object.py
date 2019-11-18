@@ -30,7 +30,7 @@ class Object:
 
         self.animanager.set(self.state)
         self.health_bar = GUI.Bar(self.get_rect().width, self.get_rect().height + 8, 2,
-                                  {75: (0, 255, 0), 25: (255, 255, 0), 0: (255, 0, 0)})
+                                  {100: (0, 255, 0), 75: (255, 255, 0), 25: (255, 0, 0)})
 
     def update(self, time):
         if self.immortal:

@@ -14,7 +14,7 @@ class Spawn:  # spawns only copy of object
 
     def spawn(self, container_name, obj, return_obj=False):
         new_obj = obj.copy()
-        self.containers[container_name].append(new_obj)
+        self.containers[container_name][new_obj.id_] = new_obj
 
         if return_obj:
             return new_obj
@@ -25,38 +25,39 @@ class Spawn:  # spawns only copy of object
             shift = Vector2D(col_rect.width / 2, col_rect.height / 2)
 
         obj_rect = obj.get_collision_rect()
-        objects = list()
         size = Vector2D(rect.width // (obj_rect.width + shift.x),
                         rect.height // (obj_rect.height + shift.y))
+        ids = list()
         for j in range(int(size.y)):
             for i in range(int(size.x)):
                 if edges:
                     if (j != 0) and (j != int(size.y) - 1) and (i != 0) and (i != int(size.x) - 1):
                         continue
-                objects.append(obj.copy())
-                objects[-1].position = Vector2D(rect.left + i * (obj_rect.width + shift.x),
+                new_obj = obj.copy()
+                new_obj.position = Vector2D(rect.left + i * (obj_rect.width + shift.x),
                                                 rect.top + j * (obj_rect.height + shift.y))
-        self.containers[container_name].extend(objects)
+                self.containers[container_name][new_obj.id_] = new_obj
+                ids.append(new_obj.id_)
 
         if return_id:
-            return self.get_id(objects)
+            return ids
 
     def spawn_random(self, container_name, count, area, obj, shift=None, return_id=False):
         if shift is None:
             col_rect = obj.get_collision_rect()
             shift = Vector2D(col_rect.width / 2, col_rect.height / 2)
 
-        objects = list()
         rects = list()
-
+        ids = list()
         for i in range(count):
-            objects.append(obj.copy())
-            objects[-1].position = self.spawn_new_position(area, rects, shift)
-            rects.append(objects[-1].get_collision_rect())
-        self.containers[container_name].extend(objects)
+            new_obj = obj.copy()
+            new_obj.position = self.spawn_new_position(area, rects, shift)
+            rects.append(new_obj.get_collision_rect())
+            self.containers[container_name][new_obj.id_] = new_obj
+            ids.append(new_obj.id_)
 
         if return_id:
-            return self.get_id(objects)
+            return ids
 
     def spawn_new_position(self, area, rects, shift):
         new_position = Vector2D(np.random.uniform(area.left, area.right),
@@ -70,9 +71,3 @@ class Spawn:  # spawns only copy of object
             if new_rect.intersects(rect):
                 return self.spawn_new_position(area, rects, shift)
         return new_position
-
-    def get_id(self, objects):
-        ids = list()
-        for object in objects:
-            ids.append(object.id_)
-        return ids

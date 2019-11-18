@@ -5,11 +5,11 @@ import numpy as np
 
 
 class Genome:
-    def __init__(self, layers):
-        self.layers = layers
+    def __init__(self):
+        self.layers = [880, 5]
         self.memory = list()
-        for i in range(len(layers) - 1):
-            self.memory.append(2 * np.random.rand(layers[i], layers[i + 1]) - 1)
+        for i in range(len(self.layers) - 1):
+            self.memory.append(2 * np.random.rand(self.layers[i], self.layers[i + 1]) - 1)
         self.memory = np.array(self.memory)
 
     def mutation(self):

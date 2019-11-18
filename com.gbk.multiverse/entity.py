@@ -4,6 +4,9 @@ import pygame
 from object import Object
 from my_libs import Rect, Vector2D
 import GUI
+from genome import Genome
+
+COUNT_OF_BUTTONS = 323
 
 
 class Entity(Object):
@@ -27,13 +30,19 @@ class Entity(Object):
 
         self.busy = False
         self.request = False  # request for action
-        self.acting = True
         self.ai = True
 
         self.satiety_bar = GUI.Bar(self.get_rect().width, self.get_rect().height, 2,
-                                   {0: (105, 17, 17)})
+                                   {100: (105, 17, 17)})
 
         self.priorities = dict()
+
+        self.genome = Genome()
+
+    def set_genome(self, genome, mutation=False):
+        self.genome = genome.copy()
+        if mutation:
+            self.genome.mutation()
 
     def generate_random_priorities(self, env_states):
         nums = [random.uniform(0, 1)]
@@ -43,6 +52,14 @@ class Entity(Object):
 
         for i in range(len(env_states)):
             self.priorities[env_states[i]] = nums[i]
+
+    def ai_control(self, features, time, objects_around):
+        buttons = {0: ' ', 1: 'a', 2: 'w', 3: 'd', 4: 's'}
+        keys = [0 for i in range(COUNT_OF_BUTTONS)]
+        result = self.genome.evaluate(features)
+        for r in result:
+            keys[ord(buttons[r])] = 1
+        self.control(keys, time, objects_around)
 
     def control(self, keys, time, objects_around):
         if self.state != 'death':

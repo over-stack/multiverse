@@ -14,10 +14,9 @@ class Bar:
         scaled = param / ((max_param + param_bonus) / self.length)
 
         color = (0, 255, 0)
-        for key in self.colors.keys():
-            if scaled >= key * (self.length / 100):
+        for key in sorted(self.colors.keys(), reverse=True):
+            if scaled <= key * (self.length / 100):
                 color = self.colors[key]
-                break
 
         position = Vector2D(center.x + cam_scroll.x, center.y + cam_scroll.y)
         pygame.draw.rect(surface, color,

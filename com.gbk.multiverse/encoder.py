@@ -12,7 +12,7 @@ from decoration import Decoration
 
 # do z-axis sorting
 class Encoder:
-    def __init__(self, tile_size, camera_size, examples):
+    def __init__(self, tile_size, camera_size, examples, map_codes):
         self.tile_size = tile_size
         self.camera_size = camera_size
         self.codes = dict()
@@ -21,6 +21,13 @@ class Encoder:
                 free_symbols = list(filter(lambda x: x not in self.codes.values(), my_libs.OBJECT_SYMBOLS))
                 code = random.choice(free_symbols)
                 self.codes[example.family] = code
+
+        values = list(self.codes.values())
+        VALUES = [i.upper() for i in values]
+        one_hot_codes = values + VALUES + map_codes
+        self.one_hot_encoder = dict()
+        for i in range(len(one_hot_codes)):
+            self.one_hot_encoder[one_hot_codes[i]] = i / len(one_hot_codes)
 
     def encode(self, map_, objects, position):
         map_ = map_
@@ -46,9 +53,13 @@ class Encoder:
         with open('map3.txt', 'w') as f:
             f.writelines(print_map_)
 
-        return map_
+        return self.one_hot_encoding(map_)
 
-    def get_codes(self):
-        values = list(self.codes.values())
-        VALUES = [i.upper() for i in values]
-        return values + VALUES
+    def one_hot_encoding(self, features):
+        features = [[self.one_hot_encoder[j] for j in features[i]] for i in range(len(features))]
+        # print(self.codes)
+        # for i in range(len(features)):
+        # for j in range(len(features[i])):
+        # print(features[i][j], ': ', end=' ')
+        # print(self.encoder[features[i][j]])
+        return features

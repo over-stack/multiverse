@@ -6,12 +6,12 @@ from my_libs import Rect, Vector2D
 
 
 class AnimationManager:
-
-    def __init__(self):
+    def __init__(self, defaultFlipped=False):
         self.animations = dict()
         self.currentAnimation = ''
         self.lastAnimation = ''
         self.flipped = False
+        self.defaultFlipped = defaultFlipped
 
     def create(self, name, sheet, cols, rows, count, speed, looped=False):
         self.animations[name] = Animation(sheet, cols, rows, count, speed, looped)
@@ -22,7 +22,10 @@ class AnimationManager:
                             topleft.y + cam_scroll.y)
 
         anim = self.animations[self.currentAnimation]
-        if self.flipped:
+        flipped = self.flipped
+        if self.defaultFlipped:
+            flipped = not self.flipped
+        if flipped:
             surface.blit(transform.flip(anim.sheet, True, False),
                          (position.x, position.y),
                          anim.frames[min(int(anim.currentFrame), anim.count - 1)].get_tuple())

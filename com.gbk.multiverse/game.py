@@ -15,6 +15,12 @@ from evolution import Evolution, EvolutionExample
 from my_libs import Rect, Vector2D
 
 
+# do z-axis sorting
+# fix damage area
+# fix animationManager
+# do convolution
+# do multithreading
+
 class Game:
     def __init__(self, screen_size, title):
         self.screen_size = screen_size
@@ -32,14 +38,15 @@ class Game:
         self.sheets = dict()
         self.animanagers = dict()
         self.examples = dict()
-        self.decorations = list()
-        self.entities = list()
+        self.decorations = dict()
+        self.entities = dict()
 
         self.include_resources()
         self.animation_managers()
 
         self.cam = Camera(screen_size=self.screen_size, coefficient=2)
         self.spawn = Spawn({'decorations': self.decorations, 'entities': self.entities})
+        self.evolution = Evolution(self.spawn)
         self.game_env = Environment()
         self.game_world = World(filename=f'{self.resources["tiny-rpg"]}tileset.png', size=Vector2D(1000, 1000),
                                 tile_size=Vector2D(16, 16))
@@ -48,8 +55,7 @@ class Game:
 
         self.add_examples()
         self.encoder = Encoder(self.game_world.tile_size, Vector2D(self.cam.frame.width, self.cam.frame.height),
-                               self.examples.values())
-        self.evolution = Evolution(self.spawn, self.game_world.get_codes() + self.encoder.get_codes())
+                               self.examples.values(), self.game_world.get_codes())
         self.add_decorations()
         self.add_entities()
 
@@ -92,7 +98,7 @@ class Game:
         self.animanagers['hero'].create(name='walk', sheet=self.sheets['hero']['run'],
                                         cols=12, rows=1, count=12, speed=0.9, looped=True)
 
-        self.animanagers['ghost'] = AnimationManager()
+        self.animanagers['ghost'] = AnimationManager(defaultFlipped=True)
         self.animanagers['ghost'].create(name='stay', sheet=self.sheets['ghost']['stay'],
                                cols=7, rows=1, count=7, speed=0.5, looped=True)
         self.animanagers['ghost'].create(name='attack', sheet=self.sheets['ghost']['walk'],
@@ -100,7 +106,7 @@ class Game:
         self.animanagers['ghost'].create(name='death', sheet=self.sheets['ghost']['death'],
                                          cols=7, rows=1, count=7, speed=0.5, looped=False)
 
-        self.animanagers['dog'] = AnimationManager()
+        self.animanagers['dog'] = AnimationManager(defaultFlipped=True)
         self.animanagers['dog'].create(name='stay', sheet=self.sheets['dog']['stay'],
                              cols=6, rows=1, count=6, speed=0.5, looped=True)
         self.animanagers['dog'].create(name='walk', sheet=self.sheets['dog']['walk'],
@@ -112,14 +118,12 @@ class Game:
         self.examples['tree'] = tree
 
         hero = Entity(animanager=self.animanagers['hero'], position=Vector2D(500, 500), speed=10, max_health=200,
-                      strength=20, family='hero')
+                      strength=20, family='hero')  # family=hero -> main character
         hero.ai = False
         self.examples['hero'] = hero
 
         dog = Entity(animanager=self.animanagers['dog'], position=Vector2D(1100, 550), speed=-12, max_health=80,
                      strength=14, family='dog')
-        dog.acting = False
-        dog.ai = False
         self.examples['dog'] = dog
 
         ghost = Entity(animanager=self.animanagers['ghost'], position=Vector2D(0, 0), speed=10, max_health=200,
@@ -130,6 +134,9 @@ class Game:
             if example.type_ == 'entity':
                 example.generate_random_priorities(env_states=self.game_env.get_states())
 
+        self.evolution.add_example('ghost', EvolutionExample(self.examples['ghost'], min_=2, max_=4,
+                                                             area=self.game_world.get_area()))
+
     def add_decorations(self):
         self.spawn.spawn_rect(container_name='decorations', rect=self.game_world.get_area(),
                               obj=self.examples['tree'], shift=None)
@@ -138,9 +145,7 @@ class Game:
 
     def add_entities(self):
         self.hero = self.spawn.spawn('entities', self.examples['hero'], return_obj=True)
-        self.spawn.spawn('entities', self.examples['dog'])
-        self.evolution.add_example('ghost', EvolutionExample(self.examples['ghost'], min_=2, max_=4,
-                                                             area=self.game_world.get_area()))
+        # self.spawn.spawn('entities', self.examples['dog'])
 
     def run(self):
         clock = pygame.time.Clock()
@@ -162,14 +167,12 @@ class Game:
 
     # vision controlling and interaction
     def vci(self, time):
-        for ent in self.entities:
-            if not ent.acting:
-                continue
+        for ent in self.entities.values():
             # Vision
             area = Rect(ent.get_rect().center.x, ent.get_rect().center.y,
                         self.cam.frame.width, self.cam.frame.height, isCenter=True)
-            entities_around = [_ for _ in self.entities if _.get_rect().intersects(area) and _ is not ent]
-            decorations_around = [_ for _ in self.decorations if _.get_rect().intersects(area)]
+            entities_around = [_ for _ in self.entities.values() if _.get_rect().intersects(area) and _ is not ent]
+            decorations_around = [_ for _ in self.decorations.values() if _.get_rect().intersects(area)]
             objects_around = entities_around + decorations_around
             world_around = self.game_world.get_world_around(ent.get_rect().center, self.cam)
             self.game_env.apply(entity=ent, objects_around=objects_around, world_around=None)
@@ -178,28 +181,27 @@ class Game:
             if not ent.ai:
                 keys = pygame.key.get_pressed()
                 if keys[pygame.K_ESCAPE]:
-                    quit(0)
+                    exit(0)
+                ent.control(keys, time, objects_around)
             else:
                 features = self.encoder.encode(world_around, objects_around, ent.get_rect().center)
-                keys = self.evolution.action(ent.id_, features)
-
-            ent.control(keys, time, objects_around)
+                ent.ai_control(features, time, objects_around)
 
     def update(self, time):
-        for dec in self.decorations:
-            dec.update(time)
-            if not dec.alive:
-                self.decorations.remove(dec)
+        for dec_id in list(self.decorations):
+            self.decorations[dec_id].update(time)
+            if not self.decorations[dec_id].alive:
+                del self.decorations[dec_id]
 
-        for ent in self.entities:
-            ent.update(time)
-            if not ent.alive:
-                self.evolution.delete_entity(ent.id_)
-                self.entities.remove(ent)
-
-                if not ent.ai:
+        for ent_id in list(self.entities):
+            self.entities[ent_id].update(time)
+            if not self.entities[ent_id].alive:
+                if self.entities[ent_id].family == 'hero':
                     print('You are dead')
-                    exit(1)
+                    exit(0)
+
+                self.evolution.delete_id(ent_id)
+                del self.entities[ent_id]
 
         self.evolution.update(time)
         self.cam.update(self.hero.get_rect().center)
@@ -210,7 +212,7 @@ class Game:
         self.canvas.fill((0, 0, 0))  # Makes black window
 
         self.game_world.draw(surface=self.canvas, position=self.hero.get_rect().center, camera=self.cam)
-        objects = self.decorations + self.entities
+        objects = list(self.decorations.values()) + list(self.entities.values())
         objects.sort(key=lambda obj: obj.get_rect().bottom)  # sorting objects by y axis
         for obj in objects:
             if obj.get_rect().intersects(self.cam.frame):
