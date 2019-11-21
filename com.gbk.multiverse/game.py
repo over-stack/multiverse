@@ -14,8 +14,6 @@ from evolution import Evolution, EvolutionExample
 
 from my_libs import Rect, Vector2D
 
-
-# do z-axis sorting
 # fix damage area
 # fix animationManager
 # do convolution
@@ -171,20 +169,23 @@ class Game:
             # Vision
             area = Rect(ent.get_rect().center.x, ent.get_rect().center.y,
                         self.cam.frame.width, self.cam.frame.height, isCenter=True)
-            entities_around = [_ for _ in self.entities.values() if _.get_rect().intersects(area) and _ is not ent]
+            entities_around = [_ for _ in self.entities.values() if _.get_rect().intersects(area)]
             decorations_around = [_ for _ in self.decorations.values() if _.get_rect().intersects(area)]
             objects_around = entities_around + decorations_around
+            objects_around.sort(key=lambda obj: obj.get_rect().bottom)  # sorting objects by y axis
             world_around = self.game_world.get_world_around(ent.get_rect().center, self.cam)
             self.game_env.apply(entity=ent, objects_around=objects_around, world_around=None)
 
             # Controlling
             if not ent.ai:
+                features = self.encoder.encode(world_around, ent.id_, objects_around, ent.get_rect().center,
+                                               print_=True)
                 keys = pygame.key.get_pressed()
                 if keys[pygame.K_ESCAPE]:
                     exit(0)
                 ent.control(keys, time, objects_around)
             else:
-                features = self.encoder.encode(world_around, objects_around, ent.get_rect().center)
+                features = self.encoder.encode(world_around, ent.id_, objects_around, ent.get_rect().center)
                 ent.ai_control(features, time, objects_around)
 
     def update(self, time):

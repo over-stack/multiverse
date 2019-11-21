@@ -21,7 +21,7 @@ class Entity(Object):
         self.satiety_speed = 0.05
         self.satiety_damage = 0.05
         self.min_satiety = 25  # min amount satiety for regeneration
-        self.attack_area_size = Vector2D(30, 20)
+        self.attack_range = Vector2D(7, 3)
 
         self.speed_bonus = 0
         self.strength_bonus = 0
@@ -169,12 +169,11 @@ class Entity(Object):
                 return
             rect = self.get_rect(toDraw=False)
             if not self.animanager.flipped:
-                area = Rect(rect.right, rect.top,
-                            self.attack_area_size.x, self.attack_area_size.y)
+                area = Rect(rect.right + self.attack_range.x / 2, rect.center.y,
+                            self.attack_range.x, self.attack_range.y, isCenter=True)
             else:
-                area = Rect(rect.left - self.attack_area_size.x, rect.top,
-                            self.attack_area_size.x, self.attack_area_size.y)
-
+                area = Rect(rect.left - self.attack_range.x / 2, rect.center.y,
+                            self.attack_range.x, self.attack_range.y, isCenter=True)
             for obj in objects_around:
                 if self.id_ != obj.id_:
                     if obj.get_rect().intersects(area):
