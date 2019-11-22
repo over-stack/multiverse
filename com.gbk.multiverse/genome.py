@@ -1,4 +1,3 @@
-from functools import reduce
 from copy import deepcopy
 import random
 import numpy as np
@@ -8,41 +7,39 @@ import skimage.measure
 
 class Genome:
     def __init__(self):
-        self.conv2d_1 = np.array([[1, 0, 1],
-                                  [0, 1, 0],
-                                  [1, 0, 1]], dtype='float')
-        self.conv2d_2 = np.array([[1, 0, 1],
-                                  [0, 1, 0],
-                                  [1, 0, 1]], dtype='float')
-        self.layers = [36, 5]  # 32?
-        self.memory = list()
-        for i in range(len(self.layers) - 1):
-            self.memory.append(2 * np.random.rand(self.layers[i], self.layers[i + 1]) - 1)
-        self.memory = np.array(self.memory)
+        self.network = {'conv2d_1': 2 * np.random.rand(3, 3) - 1,
+                        'maxpool2d_1': (2, 2),
+                        'conv2d_2': 2 * np.random.rand(3, 3) - 1,
+                        'maxpool2d_2': (2, 2),
+                        'dense_1': 2 * np.random.rand(36, 10) - 1,
+                        'dense_2': 2 * np.random.rand(10, 5) - 1}
+        self.memlayers = ['conv2d_1', 'conv2d_2', 'dense_1', 'dense_2']
 
-    def mutation(self):
-        nmem = int(random.uniform(0, 1) * self.memory.shape[0])
-        choice = [int(random.uniform(0, 1) * self.memory[nmem].shape[0]),
-                  int(random.uniform(0, 1) * self.memory[nmem].shape[1])]
-        self.memory[nmem][choice[0], choice[1]] = random.uniform(0, 1) * 10  # 10 = range
+        # print('conv2d: ', self.network['conv2d_1'])
+
+    def mutation(self, count=3):
+        layer_name = random.choice(self.memlayers)
+        layer = self.network[layer_name]
+        choice = [int(random.uniform(0, 1) * layer.shape[0]),
+                  int(random.uniform(0, 1) * layer.shape[1])]
+        # print()
+        # print(self.network[layer_name])
+        layer[choice[0], choice[1]] = random.uniform(0, 1) * 20 - 10
+        # print(self.network[layer_name])
+        # print()
+        count -= 1
+        if count > 0:
+            self.mutation(count)
 
     def evaluate(self, features):
         features = np.stack(features)
-        print(features.shape)
-        result = signal.convolve2d(features, np.rot90(self.conv2d_1, 2), 'valid')
-        print(result.shape)
-        result = skimage.measure.block_reduce(result, (2, 2), np.max)
-        print(result.shape)
-        result = signal.convolve2d(result, np.rot90(self.conv2d_2, 2), 'valid')
-        print(result.shape)
-        result = skimage.measure.block_reduce(result, (2, 2), np.max)
-        print(result.shape)
+        result = signal.convolve2d(features, np.rot90(self.network['conv2d_1'], 2), 'valid')
+        result = skimage.measure.block_reduce(result, self.network['maxpool2d_1'], np.max)
+        result = signal.convolve2d(result, np.rot90(self.network['conv2d_2'], 2), 'valid')
+        result = skimage.measure.block_reduce(result, self.network['maxpool2d_2'], np.max)
         result = result.flatten()
-        print(result.shape)
-        print()
-        result = self.sigmoid(result.dot(self.memory[0]))
-        for i in range(1, self.memory.shape[0]):
-            result = self.sigmoid(result.dot(self.memory[i]))
+        result = self.sigmoid(result.dot(self.network['dense_1']))
+        result = self.sigmoid(result.dot(self.network['dense_2']))
         encoded_results = list()
         for i in range(result.shape[0]):
             if result[i] > 0.5:

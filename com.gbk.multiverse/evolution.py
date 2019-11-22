@@ -3,6 +3,7 @@ import random
 import numpy as np
 from entity import Entity
 from spawn import Spawn
+import time
 
 
 class EvolutionExample:
@@ -11,13 +12,20 @@ class EvolutionExample:
         self.min_ = min_
         self.max_ = max_
         self.area = area  # spawn-area
-
+        self.spawning = True
+        self.nextgen = False
 
 class Evolution:
     def __init__(self, spawn):
         self.spawn = spawn
         self.examples = dict()
         self.ids = dict()
+        self.epoch = 1
+        self.start = time.monotonic()
+        self.stop = time.monotonic()
+        self.duration = False
+        self.period = 1  # period for spawn in seconds
+        self.start_duration = time.monotonic()
 
     def add_example(self, name, example):
         self.examples[name] = example
@@ -42,12 +50,25 @@ class Evolution:
             if id_ in self.ids[example_name]:
                 self.ids[example_name].remove(id_)
 
-    def update(self, time):
-        for example_name in self.ids:
+    def update(self, time_):
+        for example_name in self.examples:
             example = self.examples[example_name]
             survived = len(self.ids[example_name])
-            print(f'survived: {survived}')
-            if survived == 0:
-                self.generate(example_name, example.max_ - survived)
-            elif survived < example.min_:
-                self.generate(example_name, example.max_ - survived, nextgen=True)
+            if survived >= example.max_:
+                example.spawning = False
+                example.nextgen = False
+            if example.spawning:
+                current_time = time.monotonic()
+                if current_time - self.start_duration > self.period:
+                    self.generate(example_name, 2, example.nextgen)
+                    self.start_duration = current_time
+            else:
+                if survived < example.min_:
+                    example.spawning = True
+                    if survived > 0:
+                        example.nextgen = True
+                    self.stop = time.monotonic()
+                    self.epoch += 1
+                    print(f'Time {self.stop - self.start}')
+                    self.start = time.monotonic()
+                    print(f'Epoch: {self.epoch}')

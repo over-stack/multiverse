@@ -16,7 +16,6 @@ from my_libs import Rect, Vector2D
 
 # fix damage area
 # fix animationManager
-# do convolution
 # do multithreading
 
 class Game:
@@ -57,6 +56,8 @@ class Game:
         self.add_decorations()
         self.add_entities()
 
+        self.allow_draw = True
+
     def include_resources(self):
         self.resources['goth'] = 'resources/gothicvania patreon collection/'
         self.resources['tiny-rpg'] = 'resources/tiny-RPG-forest-files/PNG/environment/'
@@ -82,6 +83,12 @@ class Game:
             f'{self.resources["goth"]}Hell-Hound-Files/PNG/hell-hound-idle.png')
         self.sheets['dog']['walk'] = pygame.image.load(
             f'{self.resources["goth"]}Hell-Hound-Files/PNG/hell-hound-walk.png')
+
+        self.sheets['demon'] = dict()
+        self.sheets['demon']['stay'] = pygame.image.load(
+            f'{self.resources["goth"]}demon-Files/PNG/demon-idle.png')
+        self.sheets['demon']['attack'] = pygame.image.load(
+            f'{self.resources["goth"]}demon-Files/PNG/demon-attack.png')
 
     def animation_managers(self):
         self.animanagers['tree'] = AnimationManager()
@@ -110,34 +117,54 @@ class Game:
         self.animanagers['dog'].create(name='walk', sheet=self.sheets['dog']['walk'],
                                        cols=12, rows=1, count=12, speed=0.5, looped=True)
 
+        self.animanagers['demon'] = AnimationManager()
+        self.animanagers['demon'].create(name='stay', sheet=self.sheets['demon']['stay'],
+                                         cols=6, rows=1, count=6, speed=0.5, looped=True)
+        self.animanagers['demon'].create(name='attack', sheet=self.sheets['demon']['attack'],
+                                         cols=11, rows=1, count=11, speed=0.5, looped=False)
+
     def add_examples(self):
         tree = Decoration(animanager=self.animanagers['tree'], position=Vector2D(0, 0),
                           max_health=1000, family='tree')
         self.examples['tree'] = tree
 
+        immortal_tree = Decoration(animanager=self.animanagers['tree'], position=Vector2D(0, 0),
+                                   max_health=1000, family='tree')
+        immortal_tree.immortal = True
+        self.examples['immortal_tree'] = immortal_tree
+
         hero = Entity(animanager=self.animanagers['hero'], position=Vector2D(500, 500), speed=10, max_health=200,
                       strength=20, family='hero')  # family=hero -> main character
         hero.ai = False
+        hero.immortal = True
         self.examples['hero'] = hero
 
         dog = Entity(animanager=self.animanagers['dog'], position=Vector2D(1100, 550), speed=-12, max_health=80,
                      strength=14, family='dog')
         self.examples['dog'] = dog
 
-        ghost = Entity(animanager=self.animanagers['ghost'], position=Vector2D(0, 0), speed=10, max_health=200,
+        ghost = Entity(animanager=self.animanagers['ghost'], position=Vector2D(0, 0), speed=10, max_health=100,
                        strength=20, family='ghost')
         self.examples['ghost'] = ghost
+
+        demon = Entity(animanager=self.animanagers['demon'], position=Vector2D(0, 0), speed=12, max_health=200,
+                       strength=40, family='demon')
+        self.examples['demon'] = demon
 
         for example in self.examples.values():
             if example.type_ == 'entity':
                 example.generate_random_priorities(env_states=self.game_env.get_states())
 
-        self.evolution.add_example('ghost', EvolutionExample(self.examples['ghost'], min_=2, max_=4,
+        self.evolution.add_example('ghost', EvolutionExample(self.examples['ghost'], min_=2, max_=10,
                                                              area=self.game_world.get_area()))
+        self.evolution.add_example('demon', EvolutionExample(self.examples['demon'], min_=2, max_=10,
+                                                             area=self.game_world.get_area()))
+        # self.evolution.add_example('dog', EvolutionExample(self.examples['dog'], min_=2, max_=5,
+        # area=self.game_world.get_area()))
 
     def add_decorations(self):
         self.spawn.spawn_rect(container_name='decorations', rect=self.game_world.get_area(),
-                              obj=self.examples['tree'], shift=None)
+                              obj=self.examples['immortal_tree'], shift=None)
         self.spawn.spawn_random(container_name='decorations', count=50, area=self.game_world.get_area(),
                                 obj=self.examples['tree'], shift=Vector2D(15, 15))
 
@@ -152,6 +179,7 @@ class Game:
             clock.tick(self.fps)
             time = clock.get_time()
             time = time / 80  # game speed
+            #time = 2
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -159,7 +187,9 @@ class Game:
 
             self.vci(time)
             self.update(time)
-            self.draw()
+
+            if self.allow_draw:
+                self.draw()
 
         pygame.quit()
 
@@ -178,11 +208,13 @@ class Game:
 
             # Controlling
             if not ent.ai:
-                features = self.encoder.encode(world_around, ent.id_, objects_around, ent.get_rect().center,
-                                               print_=True)
+                # features = self.encoder.encode(world_around, ent.id_, objects_around, ent.get_rect().center,
+                #print_=True)
                 keys = pygame.key.get_pressed()
                 if keys[pygame.K_ESCAPE]:
                     exit(0)
+                if keys[pygame.K_BACKSPACE]:
+                    self.allow_draw = not self.allow_draw
                 ent.control(keys, time, objects_around)
             else:
                 features = self.encoder.encode(world_around, ent.id_, objects_around, ent.get_rect().center)
@@ -219,8 +251,8 @@ class Game:
             if obj.get_rect().intersects(self.cam.frame):
                 obj.draw(self.canvas, self.cam.get_scroll())
 
-        self.canvas.blit(self.sun.img, (self.cam.frame.topleft.x + self.cam.get_scroll().x,
-                                        self.cam.frame.topleft.y + self.cam.get_scroll().y))
+                # self.canvas.blit(self.sun.img, (self.cam.frame.topleft.x + self.cam.get_scroll().x,
+                #self.cam.frame.topleft.y + self.cam.get_scroll().y))
 
         self.window.blit(pygame.transform.scale(self.canvas, [self.screen_size.x * self.cam.coefficient,
                                                               self.screen_size.y * self.cam.coefficient]),

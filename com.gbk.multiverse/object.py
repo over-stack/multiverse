@@ -14,7 +14,7 @@ class Object:
 
         self.max_health = max_health
         self.health = max_health
-        self.regeneration_speed = 0.1
+        self.regeneration_speed = 0.7
 
         self.health_bonus = 0.
         self.regeneration_speed_bonus = 0.

@@ -5,6 +5,7 @@ from object import Object
 from my_libs import Rect, Vector2D
 import GUI
 from genome import Genome
+from copy import deepcopy
 
 COUNT_OF_BUTTONS = 323
 
@@ -18,8 +19,8 @@ class Entity(Object):
         self.strength = strength
         self.max_satiety = 100
         self.satiety = self.max_satiety
-        self.satiety_speed = 0.05
-        self.satiety_damage = 0.05
+        self.satiety_speed = 0.5
+        self.satiety_damage = 2
         self.min_satiety = 25  # min amount satiety for regeneration
         self.attack_range = Vector2D(7, 3)
 
@@ -178,8 +179,8 @@ class Entity(Object):
                 if self.id_ != obj.id_:
                     if obj.get_rect().intersects(area):
                         obj.health -= self.strength + self.strength_bonus
-                        if obj.type_ == 'entity':
-                            self.satiety += 20  # vampire
+                        if obj.type_ == 'entity' and obj.family != 'hero':
+                            self.satiety += 50  # vampire
 
         self.request = False
 
@@ -203,3 +204,14 @@ class Entity(Object):
         if not self.visible:
             return
         self.satiety_bar.draw(surface, self.satiety, self.max_satiety, self.satiety_bonus, self.position, cam_frame)
+
+    def copy(self):
+        dc = deepcopy(self)
+        dc.id_ = id(dc)
+        dc.genome = Genome()
+        return dc
+
+    def get_direction(self):
+        if self.animanager.flipped:
+            return 'left'
+        return 'right'
