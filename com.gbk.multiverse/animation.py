@@ -2,6 +2,7 @@ from copy import deepcopy
 
 from my_libs import Rect, Vector2D
 
+
 class Animation:
     def __init__(self, sheet, cols, rows, count, speed, looped=False):
         self.speed = speed

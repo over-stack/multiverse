@@ -1,3 +1,4 @@
+import numpy as np
 import random
 import pygame
 
@@ -11,7 +12,7 @@ COUNT_OF_BUTTONS = 323
 
 
 class Entity(Object):
-    def __init__(self, animanager, position, speed, max_health, strength, family='single', type_='entity'):
+    def __init__(self, animanager, position, speed, max_health, strength, vision_area, family='single', type_='entity'):
         Object.__init__(self, animanager, position, max_health, family, type_)
 
         self.speed = speed
@@ -23,27 +24,38 @@ class Entity(Object):
         self.satiety_damage = 2
         self.min_satiety = 25  # min amount satiety for regeneration
         self.attack_range = Vector2D(7, 3)
+        self.vision_area = vision_area
 
         self.speed_bonus = 0
         self.strength_bonus = 0
         self.satiety_bonus = 0
         self.satiety_speed_bonus = 0
 
+        self.score = 1
+
         self.busy = False
         self.request = False  # request for action
         self.ai = True
+        self.ghost = False
+
+        self.friends = list()
+        self.friendly_fire = False
+        self.friendly_collision = False
 
         self.satiety_bar = GUI.Bar(self.get_rect().width, self.get_rect().height, 2,
                                    {100: (105, 17, 17)})
 
         self.priorities = dict()
 
-        self.genome = Genome()
+        self.genome_layers = [9, 30, 40, 30, 5]
+        self.genome = Genome(layers=self.genome_layers)
 
-    def set_genome(self, genome, mutation=False):
+        self.feature = None  ####################
+        self.features = list()
+        self.answers = list()
+
+    def set_genome(self, genome):
         self.genome = genome.copy()
-        if mutation:
-            self.genome.mutation()
 
     def generate_random_priorities(self, env_states):
         nums = [random.uniform(0, 1)]
@@ -54,15 +66,20 @@ class Entity(Object):
         for i in range(len(env_states)):
             self.priorities[env_states[i]] = nums[i]
 
-    def ai_control(self, features, time, objects_around):
-        buttons = {0: ' ', 1: 'a', 2: 'w', 3: 'd', 4: 's'}
-        keys = [0 for i in range(COUNT_OF_BUTTONS)]
-        result = self.genome.evaluate(features)
-        for r in result:
-            keys[ord(buttons[r])] = 1
-        self.control(keys, time, objects_around)
+    def ai_control(self, time, entities_around, decorations_around):
+        if self.ghost:
+            return
 
-    def control(self, keys, time, objects_around):
+        features = self.encode_features(entities_around, decorations_around)
+        x = self.genome.evaluate(features)
+        keys = self.decode_features(x)
+
+        #objects_around = entities_around + decorations_around  ######################
+        self.control(keys, time, entities_around, decorations_around)
+
+    def control(self, keys, time, entities_around, decorations_around):
+        self.feature = self.encode_features(entities_around, decorations_around)
+        objects_around = entities_around + decorations_around
         if self.state != 'death':
             self.keys_pressed(keys, time)
             self.keys_released(keys, time)
@@ -109,6 +126,29 @@ class Entity(Object):
                 self.busy = True
                 self.request = True
 
+        if keys[pygame.K_KP4]:
+            self.features.append(self.feature)
+            self.answers.append([1, 0, 0, 0, 0])
+        if keys[pygame.K_KP6]:
+            self.features.append(self.feature)
+            self.answers.append([0, 1, 0, 0, 0])
+        if keys[pygame.K_KP8]:
+            self.features.append(self.feature)
+            self.answers.append([0, 0, 1, 0, 0])
+        if keys[pygame.K_KP2]:
+            self.features.append(self.feature)
+            self.answers.append([0, 0, 0, 1, 0])
+        if keys[pygame.K_KP5]:
+            self.features.append(self.feature)
+            self.answers.append([0, 0, 0, 0, 1])
+        if keys[pygame.K_p]:
+            with open('features.txt', 'w', encoding='utf-8') as f:
+                for feature in self.features:
+                    f.write(' '.join(str(i) for i in feature) + '\n')
+            with open('answers.txt', 'w', encoding='utf-8') as f:
+                for answer in self.answers:
+                    f.write(' '.join(str(i) for i in answer) + '\n')
+
     def keys_released(self, keys, time):
         if not (keys[pygame.K_d] or keys[pygame.K_a] or keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_SPACE]):
             if not self.busy:
@@ -145,6 +185,8 @@ class Entity(Object):
 
         collision_rect = self.get_collision_rect()
         for object_ in objects:
+            if not self.friendly_collision and object_.family in self.friends:  # OFF FRIENDLY COLLISION
+                continue
             if not object_.isCollision or self.id_ == object_.id_:
                 continue
             object_collision_rect = object_.get_collision_rect()
@@ -178,14 +220,19 @@ class Entity(Object):
             for obj in objects_around:
                 if self.id_ != obj.id_:
                     if obj.get_rect().intersects(area):
+                        if not self.friendly_fire and obj.family in self.friends:  # OFF FRIENDLY FIRE
+                            continue
                         obj.health -= self.strength + self.strength_bonus
-                        if obj.type_ == 'entity' and obj.family != 'hero':
-                            self.satiety += 50  # vampire
+                        if obj.type_ == 'entity' and not obj.immortal:
+                                self.satiety += 100  # vampire
+                                self.score += 100
 
         self.request = False
 
     def update(self, time):
         Object.update(self, time)
+
+        self.score += time  #######################
 
         if self.satiety > 0:
             self.satiety -= self.satiety_speed * time
@@ -208,10 +255,86 @@ class Entity(Object):
     def copy(self):
         dc = deepcopy(self)
         dc.id_ = id(dc)
-        dc.genome = Genome()
+        dc.genome = Genome(self.genome_layers)
         return dc
 
-    def get_direction(self):
-        if self.animanager.flipped:
-            return 'left'
-        return 'right'
+    def make_ghost(self):
+        self.ghost = True
+        self.isCollision = False
+        self.visible = False
+
+    def encode_features(self, entities_around, decorations_around):
+        health = min(self.health / (self.max_health + self.health_bonus), 1)
+
+        enemies_around = [ent for ent in entities_around if ent.family not in self.friends]
+        e_x = 1
+        e_y = 1
+        e_health = 0
+        e_direction = 1
+        if len(enemies_around) > 0:
+            nmin = 0
+            valuemin = self.get_collision_rect().distance_polar(enemies_around[0].get_collision_rect())[1]
+            for i in range(1, len(enemies_around)):
+                new_value = self.get_collision_rect().distance_polar(enemies_around[i].get_collision_rect())[1]
+                if new_value < valuemin:
+                    nmin = i
+                    valuemin = new_value
+            enemy = enemies_around[nmin]
+            e_x, e_y = self.get_collision_rect().distance2d(enemy.get_collision_rect())
+            e_x = e_x / (self.vision_area.x / 2)
+            e_y = e_y / (self.vision_area.y / 2)
+            e_health = min(enemy.health / (enemy.max_health + enemy.health_bonus), 1)
+            e_direction = enemy.get_direction()
+
+        d_x = 1
+        d_y = 1
+        d_health = 0
+        if len(decorations_around) > 0:
+            nmin = 0
+            valuemin = self.get_collision_rect().distance_polar(decorations_around[0].get_collision_rect())[1]
+            for i in range(1, len(decorations_around)):
+                new_value = self.get_collision_rect().distance_polar(decorations_around[i].get_collision_rect())[1]
+                if new_value < valuemin:
+                    nmin = i
+                    valuemin = new_value
+            decoration = decorations_around[nmin]
+            d_x, d_y = self.get_collision_rect().distance2d(decoration.get_collision_rect())
+            d_x = d_x / (self.vision_area.x / 2)
+            d_y = d_y / (self.vision_area.y / 2)
+            d_health = min(decoration.health / (decoration.max_health + decoration.health_bonus), 1)
+
+        features = [health,
+                    self.get_direction(),
+                    e_x,
+                    e_y,
+                    e_health,
+                    e_direction,
+                    d_x,
+                    d_y,
+                    d_health]
+
+        return features
+
+    def decode_features(self, x):
+        '''
+        buttons = self.genome.evaluate(features)
+        for b in buttons:
+            keys[ord(b)] = 1
+        '''
+
+        button = ' '
+        m = np.argmax(x)
+        if m == 0:
+            button = 'a'
+        elif m == 1:
+            button = 'd'
+        elif m == 2:
+            button = 'w'
+        elif m == 3:
+            button = 's'
+        elif m == 4:
+            button = ' '
+
+        keys = [0 for i in range(COUNT_OF_BUTTONS)]
+        keys[ord(button)] = 1
+        return keys

@@ -1,4 +1,5 @@
 from copy import deepcopy
+import pygame as pg
 from pygame import transform
 from animation import Animation
 
@@ -12,6 +13,7 @@ class AnimationManager:
         self.lastAnimation = ''
         self.flipped = False
         self.defaultFlipped = defaultFlipped
+        self.simple_drawing = False
 
     def create(self, name, sheet, cols, rows, count, speed, looped=False):
         self.animations[name] = Animation(sheet, cols, rows, count, speed, looped)
@@ -26,13 +28,19 @@ class AnimationManager:
         if self.defaultFlipped:
             flipped = not self.flipped
         if flipped:
-            surface.blit(transform.flip(anim.sheet, True, False),
-                         (position.x, position.y),
-                         anim.frames[min(int(anim.currentFrame), anim.count - 1)].get_tuple())
+            if self.simple_drawing:
+                pg.draw.rect(surface, (0, 255, 0), pg.Rect(position.x, position.y, anim.width, anim.height))
+            else:
+                surface.blit(transform.flip(anim.sheet, True, False),
+                             (position.x, position.y),
+                             anim.frames[min(int(anim.currentFrame), anim.count - 1)].get_tuple())
         else:
-            surface.blit(anim.sheet,
-                         (position.x, position.y),
-                         anim.frames[min(int(anim.currentFrame), anim.count - 1)].get_tuple())
+            if self.simple_drawing:
+                pg.draw.rect(surface, (0, 255, 0), pg.Rect(position.x, position.y, anim.width, anim.height))
+            else:
+                surface.blit(anim.sheet,
+                             (position.x, position.y),
+                             anim.frames[min(int(anim.currentFrame), anim.count - 1)].get_tuple())
 
     def set(self, name):
         if name not in self.animations.keys():

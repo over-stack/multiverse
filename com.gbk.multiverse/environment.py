@@ -11,7 +11,7 @@ class Environment:
     def get_states(self):
         return list(self.bonus.keys())
 
-    def apply(self, entity, objects_around, world_around):
+    def apply(self, entity, objects_around):
         tree_count = 0
         entity_count = 0
         same_entity_count = 0

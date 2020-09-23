@@ -1,4 +1,5 @@
 import string
+import numpy as np
 
 MAP_SYMBOLS = list(filter(lambda x: x not in string.ascii_letters, string.printable))
 OBJECT_SYMBOLS = list(string.ascii_lowercase)
@@ -63,3 +64,15 @@ class Rect:
 
     def get_tuple(self):
         return self.left, self.top, self.width, self.height
+
+    def distance2d(self, rect):
+        return rect.center.x - self.center.x, rect.center.y - self.center.y
+
+    def distance_polar(self, rect):
+        a, b = self.distance2d(rect)
+        if a == 0:
+            if b == 0:
+                return 0, 0
+            else:
+                return np.sign(b) * np.pi / 2, np.sqrt(b*b)
+        return np.arctan(b/a), np.sqrt(a*a + b*b)

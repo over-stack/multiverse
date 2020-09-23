@@ -72,3 +72,6 @@ class Object:
         dc = deepcopy(self)
         dc.id_ = id(dc)
         return dc
+
+    def get_direction(self):
+        return 2 * int(not self.animanager.flipped) - 1
