@@ -1,10 +1,7 @@
-from copy import deepcopy
-import random
 import numpy as np
-from entity import Entity
-from spawn import Spawn
 import time
 from genome import Genome
+from my_libs import Rect, Vector2D
 
 
 class EvolutionExample:
@@ -13,9 +10,10 @@ class EvolutionExample:
         self.min_ = min_
         self.max_ = max_
         self.area = area  # spawn-area
+        self.shift = Vector2D(0, 0)
         self.spawning = True
         self.start = time.monotonic()
-        self.duration = 200
+        self.duration = 10
         self.epoch = 0
         self.current_population = 0
         self.mutation_prob = 0.2
@@ -27,9 +25,9 @@ class Evolution:
         self.examples = dict()
         self.entities = dict()
 
-    def add_example(self, name, example, start_genome_file=''):
-        self.examples[name] = example
-        self.entities[name] = list()
+    def add_example(self, example, start_genome_file=''):
+        self.examples[example.entity.family] = example
+        self.entities[example.entity.family] = list()
 
         genomes = list()
         if start_genome_file:
@@ -37,7 +35,7 @@ class Evolution:
             start_genome.load(start_genome_file)
             for i in range(example.max_):
                 genomes.append(start_genome)
-        self.generate(name, genomes)
+        self.generate(example.entity.family, genomes)
 
     def delete_example(self, name):
         del self.examples[name]
@@ -45,7 +43,8 @@ class Evolution:
 
     def generate(self, example_name, genomes=None):
         example = self.examples[example_name]
-        entities = self.spawn.spawn_random('entities', example.max_, example.area, example.entity, return_obj=True)
+        entities = self.spawn.spawn_random(example.max_, example.area, example.entity, example.shift,
+                                           return_obj=True)
         self.entities[example_name] = entities
         example.current_population = example.max_
         example.epoch += 1
@@ -56,8 +55,7 @@ class Evolution:
                 entities[i].set_genome(genomes[i])
 
     def remove_entities(self, example_name):
-        for ent in self.entities[example_name]:
-            self.spawn.remove_by_id('entities', ent.id_)
+        self.spawn.remove_family('entities', example_name)
         del self.entities[example_name]
         self.entities[example_name] = list()
 
@@ -69,13 +67,13 @@ class Evolution:
                 entities.sort(key=lambda x: x.score, reverse=True)
                 probabilities = list()
                 score_sum_ = 0
-                print(example_name)
-                print('Epoch:', example.epoch)
+                #print(example_name)
+                #print('Epoch:', example.epoch)
                 for ent in entities:
                     probabilities.append(ent.score)
                     score_sum_ += ent.score
-                    print(ent.score, end=' ')
-                print('\n////////////', score_sum_, '/////////////////')
+                    #print(ent.score, end=' ')
+                #print('\n////////////', score_sum_, '/////////////////')
 
                 probabilities = [p / score_sum_ for p in probabilities]
                 pool = np.random.choice(entities, example.max_, p=probabilities)
@@ -104,9 +102,6 @@ class Evolution:
                     count += 1
         return genome
 
-    def archive(self, id_):
-        for k in self.entities:
-            for v in self.entities[k]:
-                if id_ == v.id_:
-                    self.examples[k].current_population -= 1
-                    return
+    def archive(self, family):
+        if family in self.examples.keys():
+                self.examples[family].current_population -= 1

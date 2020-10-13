@@ -1,8 +1,5 @@
 import random
-import string
-import numpy as np
 from pygame import image, Rect
-import pygame
 
 import my_libs
 from my_libs import Rect, Vector2D

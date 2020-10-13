@@ -8,30 +8,29 @@ from entity import Entity
 from decoration import Decoration
 from environment import Environment
 from sun import Sun
-from spawn import Spawn
+from spawn import Spawn, SpawnExample
 from evolution import Evolution, EvolutionExample
 from genome import Genome
 
 from my_libs import Rect, Vector2D
-5
-# add simple rendering (learn mode)
-# fix damage and collision area   (custom collision)
-# features and answers writing     (objects around)
-# more accurate random spawn
-# periodic spawn
-# add map limits for moving
-# do not spawn on other objects
-# family = example_name
-# animation time
 
-# make all containers in spawn
-# clear imports
+# add spawn_rect by count
+# shift in spawn = border
+# make families instead of example_name
+# add map limits for moving
 # optimize loops
+# clear imports
 # add multi-threading (evolution, spawn)
+# add simple rendering (learn mode)
+
+# fix damage and collision area   (custom collision)
 # fix random bag with map
 # fix animationManager
 
+# do not spawn on other objects
+# animation time
 # add camera scaling
+# add camera attack effects
 # add pause
 # add genetic history
 # add long range weapons
@@ -71,8 +70,8 @@ class Game:
         self.cam = Camera(screen_size=self.screen_size, coefficient=2)
         self.spawn = Spawn({'decorations': self.decorations, 'entities': self.entities})
         self.evolution = Evolution(self.spawn)
-        self.game_env = Environment()
-        self.game_world = World(filename=f'{self.resources["tiny-rpg"]}tileset.png', size=Vector2D(700, 700),
+        #self.game_env = Environment()
+        self.game_world = World(filename=f'{self.resources["tiny-rpg"]}tileset.png', size=Vector2D(810, 800),
                                 tile_size=Vector2D(16, 16))
         self.game_world.load_map(self.game_world.generate_world())
         self.sun = Sun(self.cam.frame.width, self.cam.frame.height)
@@ -184,11 +183,13 @@ class Game:
                                          cols=4, rows=1, count=4, speed=0.5, looped=False)
 
     def add_examples(self):
-        hero = Entity(animanager=self.animanagers['hero'], position=Vector2D(100, 100), speed=10, max_health=1000,
+        hero = Entity(animanager=self.animanagers['hero'], speed=10, max_health=1000,
                       strength=100, vision_area=Vector2D(self.cam.frame.width, self.cam.frame.height),
                       family='hero')  # family=hero -> main character
         hero.ai = False
         hero.immortal = True
+        hero.strength = 100000
+        hero.position = Vector2D(100, 100)
         #hero.alive = True
         #hero.isCollision = True
         #hero.satiety_speed = 0
@@ -196,58 +197,59 @@ class Game:
         #hero.make_ghost()
         self.examples['hero'] = hero
 
-        tree = Decoration(animanager=self.animanagers['tree'], position=Vector2D(0, 0),
-                          max_health=1000, family='tree')
+        tree = Decoration(animanager=self.animanagers['tree'], max_health=1000, family='tree')
         self.examples['tree'] = tree
 
-        tree_dried = Decoration(animanager=self.animanagers['tree-dried'], position=Vector2D(0, 0),
-                          max_health=1000, family='tree-dried')
+        tree_dried = Decoration(animanager=self.animanagers['tree-dried'], max_health=1000, family='tree-dried')
         self.examples['tree-dried'] = tree_dried
 
-        immortal_tree = Decoration(animanager=self.animanagers['tree'], position=Vector2D(0, 0),
-                                   max_health=1000, family='immortal-tree')
+        immortal_tree = Decoration(animanager=self.animanagers['tree'], max_health=1000, family='immortal-tree')
         immortal_tree.immortal = True
         self.examples['immortal-tree'] = immortal_tree
 
-        monument = Decoration(animanager=self.animanagers['monument'], position=Vector2D(0, 0),
-                                   max_health=5000, family='monument')
+        monument = Decoration(animanager=self.animanagers['monument'], max_health=5000, family='monument')
         self.examples['monument'] = monument
 
-        dog = Entity(animanager=self.animanagers['dog'], position=Vector2D(1100, 550), speed=-12, max_health=80,
-                     strength=14, vision_area=Vector2D(self.cam.frame.width, self.cam.frame.height), family='dog')
+        dog = Entity(animanager=self.animanagers['dog'], speed=-12, max_health=80, strength=14,
+                     vision_area=Vector2D(self.cam.frame.width, self.cam.frame.height), family='dog')
         self.examples['dog'] = dog
 
-        ghost = Entity(animanager=self.animanagers['ghost'], position=Vector2D(0, 0), speed=10, max_health=100,
-                       strength=10, vision_area=Vector2D(self.cam.frame.width, self.cam.frame.height), family='ghost')
+        ghost = Entity(animanager=self.animanagers['ghost'], speed=10, max_health=100, strength=10,
+                       vision_area=Vector2D(self.cam.frame.width, self.cam.frame.height), family='ghost')
         ghost.immortal = False
         self.examples['ghost'] = ghost
 
-        demon = Entity(animanager=self.animanagers['demon'], position=Vector2D(0, 0), speed=12, max_health=200,
-                       strength=40, vision_area=Vector2D(self.cam.frame.width, self.cam.frame.height), family='demon')
+        demon = Entity(animanager=self.animanagers['demon'], speed=12, max_health=200, strength=40,
+                       vision_area=Vector2D(self.cam.frame.width, self.cam.frame.height), family='demon')
         self.examples['demon'] = demon
 
-        hell_beast = Entity(animanager=self.animanagers['hell-beast'], position=Vector2D(0, 0), speed=20, max_health=300,
-                       strength=100, vision_area=Vector2D(self.cam.frame.width, self.cam.frame.height), family='hell-beast')
+        hell_beast = Entity(animanager=self.animanagers['hell-beast'], speed=20, max_health=300,
+                            strength=100, vision_area=Vector2D(self.cam.frame.width, self.cam.frame.height), family='hell-beast')
         hell_beast.friends.append('hell-beast')
         hell_beast.friends.append('hero')
         self.examples['hell-beast'] = hell_beast
 
         for example in self.examples.values():
-            if example.type_ == 'entity':
+            if example.container == 'entity':
                 example.generate_random_priorities(env_states=self.game_env.get_states())
 
-        self.evolution.add_example('hell-beast', EvolutionExample(self.examples['hell-beast'], min_=2, max_=10,
+        self.evolution.add_example(EvolutionExample(self.examples['hell-beast'], min_=2, max_=2,
                                                                   area=self.game_world.get_area()))
                                    #start_genome_file=self.genomes_files['genome1'])
 
-        self.evolution.add_example('ghost', EvolutionExample(self.examples['ghost'], min_=2, max_=10,
-                                                             area=self.game_world.get_area()))
+        #self.evolution.add_example('ghost', EvolutionExample(self.examples['ghost'], min_=2, max_=20,
+                                                             #area=self.game_world.get_area()))
+        self.spawn.add_example(SpawnExample(self.examples['ghost'], min_=2, max_=2, duration=1000,
+                                                     area=self.game_world.get_area(), shift=Vector2D(10, 10)))
+
+        self.spawn.add_example(SpawnExample(self.examples['tree'], min_=10, max_=50, duration=100000,
+                                            area=self.game_world.get_area(), shift=Vector2D(10, 10)))
 
     def add_decorations(self):
-        self.spawn.spawn_rect(container_name='decorations', rect=self.game_world.get_area(),
-                              obj=self.examples['immortal-tree'], shift=None)
+        self.spawn.spawn_rect(rect=self.game_world.get_area(),
+                              obj=self.examples['immortal-tree'], shift=Vector2D(10, 10))
 
-        #self.spawn.spawn_random(container_name='decorations', count=50, area=self.game_world.get_area(),
+        #self.spawn.spawn_random(count=50, area=self.game_world.get_area(),
                                #obj=self.examples['tree'], shift=Vector2D(15, 15))
 
         self.tree_start = len(self.decorations)
@@ -261,8 +263,8 @@ class Game:
         '''
 
     def add_entities(self):
-        self.hero = self.spawn.spawn(container_name='entities', obj=self.examples['hero'], return_obj=True)
-        #self.spawn.spawn_random(container=self.entities, count=5, area=self.game_world.get_area(),
+        self.hero = self.spawn.spawn(obj=self.examples['hero'], return_obj=True)
+        #self.spawn.spawn_random(count=5, area=self.game_world.get_area(),
                                 #obj=self.examples['dog'], shift=Vector2D(15, 15))
 
     def run(self):
@@ -289,13 +291,14 @@ class Game:
     def vci(self, time):
         for ent in self.entities:
             # Vision
-            area = Rect(ent.get_rect().center.x, ent.get_rect().center.y,
+            rect = ent.get_rect()
+            area = Rect(rect.center.x, rect.center.y,
                         ent.vision_area.x, ent.vision_area.y, isCenter=True)
             entities_around = [_ for _ in self.entities if _.alive and _.get_rect().intersects(area) and _ is not ent]
             decorations_around = [_ for _ in self.decorations if _.get_rect().intersects(area)]
-            objects_around = entities_around + decorations_around
+            #objects_around = entities_around + decorations_around
             #world_around = self.game_world.get_world_around(ent.get_rect().center)
-            self.game_env.apply(entity=ent, objects_around=objects_around)
+            #self.game_env.apply(entity=ent, objects_around=objects_around)
 
             # Controlling
             if not ent.ai:
@@ -312,24 +315,17 @@ class Game:
         for dec in self.decorations:
             dec.update(time)
             if not dec.alive:
-                self.decorations.remove(dec)
-                self.tree_count -= 1 #####################
-                if self.tree_start - self.tree_count > 20:
-                    self.spawn.spawn_random(container_name='decorations', count=50, area=self.game_world.get_area(),
-                                            obj=self.examples['tree'], shift=Vector2D(15, 15))
-                    self.tree_count += 50
+                self.spawn.safe_remove(dec)
 
         for ent in self.entities:
             ent.update(time)
             if not ent.alive:
                 if ent.ai:
-                    if not ent.ghost:
-                        ent.make_ghost()
-                        self.evolution.archive(ent.id_)
+                    self.evolution.archive(ent.family)
+                    self.spawn.safe_remove(ent)
                 else:
-                    if not ent.ghost:
-                        print('You are dead')
-                        exit(1)
+                    print('You are dead')
+                    exit(1)
 
         self.evolution.update()
         self.spawn.update()

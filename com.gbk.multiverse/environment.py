@@ -20,7 +20,7 @@ class Environment:
             if obj.family == 'tree':
                 tree_count += 1
 
-            if obj.type_ == 'entity' and obj.id_ != entity.id_:
+            if obj.type_ == 'entities' and obj.id_ != entity.id_:
                 entity_count += 1
                 if obj.family == entity.family:
                     same_entity_count += 1

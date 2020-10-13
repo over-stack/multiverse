@@ -8,9 +8,9 @@ import GUI
 
 
 class Object:
-    def __init__(self, animanager, position, max_health, family='single', type_='object'):
+    def __init__(self, animanager, max_health, family='single', container=None):
         self.animanager = animanager.copy()
-        self.position = position  # center
+        self.position = Vector2D(0, 0)  # center
 
         self.max_health = max_health
         self.health = max_health
@@ -20,7 +20,7 @@ class Object:
         self.regeneration_speed_bonus = 0.
 
         self.id_ = id(self)
-        self.type_ = type_
+        self.container = container
         self.family = family
         self.isCollision = True
         self.state = 'stay'

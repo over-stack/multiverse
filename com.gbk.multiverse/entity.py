@@ -12,16 +12,16 @@ COUNT_OF_BUTTONS = 323
 
 
 class Entity(Object):
-    def __init__(self, animanager, position, speed, max_health, strength, vision_area, family='single', type_='entity'):
-        Object.__init__(self, animanager, position, max_health, family, type_)
+    def __init__(self, animanager, speed, max_health, strength, vision_area, family='single', container='entities'):
+        Object.__init__(self, animanager, max_health, family, container)
 
         self.speed = speed
         self.acceleration = Vector2D(0, 0)
         self.strength = strength
         self.max_satiety = 100
         self.satiety = self.max_satiety
-        self.satiety_speed = 0.5
-        self.satiety_damage = 2
+        self.satiety_speed = 0
+        self.satiety_damage = 0
         self.min_satiety = 25  # min amount satiety for regeneration
         self.attack_range = Vector2D(7, 3)
         self.vision_area = vision_area
@@ -36,7 +36,6 @@ class Entity(Object):
         self.busy = False
         self.request = False  # request for action
         self.ai = True
-        self.ghost = False
 
         self.friends = list()
         self.friendly_fire = False
@@ -53,6 +52,7 @@ class Entity(Object):
         self.feature = None  ####################
         self.features = list()
         self.answers = list()
+        self.write_features = True
 
     def set_genome(self, genome):
         self.genome = genome.copy()
@@ -67,9 +67,6 @@ class Entity(Object):
             self.priorities[env_states[i]] = nums[i]
 
     def ai_control(self, time, entities_around, decorations_around):
-        if self.ghost:
-            return
-
         features = self.encode_features(entities_around, decorations_around)
         x = self.genome.evaluate(features)
         keys = self.decode_features(x)
@@ -126,21 +123,39 @@ class Entity(Object):
                 self.busy = True
                 self.request = True
 
-        if keys[pygame.K_KP4]:
+        if keys[pygame.K_KP4] and self.write_features:
             self.features.append(self.feature)
             self.answers.append([1, 0, 0, 0, 0])
-        if keys[pygame.K_KP6]:
+            self.write_features = False
+        if keys[pygame.K_KP6] and self.write_features:
             self.features.append(self.feature)
             self.answers.append([0, 1, 0, 0, 0])
-        if keys[pygame.K_KP8]:
+            self.write_features = False
+        if keys[pygame.K_KP8] and self.write_features:
             self.features.append(self.feature)
             self.answers.append([0, 0, 1, 0, 0])
-        if keys[pygame.K_KP2]:
+            self.write_features = False
+        if keys[pygame.K_KP2] and self.write_features:
             self.features.append(self.feature)
             self.answers.append([0, 0, 0, 1, 0])
-        if keys[pygame.K_KP5]:
+            self.write_features = False
+        if keys[pygame.K_KP5] and self.write_features:
+
+            print(f'health = {self.feature[0]}')
+            print(f'direction = {self.feature[1]}')
+            print(f'e_x = {self.feature[2]}')
+            print(f'e_y = {self.feature[3]}')
+            print(f'e_health = {self.feature[4]}')
+            print(f'e_direction = {self.feature[5]}')
+            print(f'd_x = {self.feature[6]}')
+            print(f'd_y = {self.feature[7]}')
+            print(f'd_health = {self.feature[8]}')
+            print(self.feature)
+
             self.features.append(self.feature)
             self.answers.append([0, 0, 0, 0, 1])
+            self.write_features = False
+
         if keys[pygame.K_p]:
             with open('features.txt', 'w', encoding='utf-8') as f:
                 for feature in self.features:
@@ -177,6 +192,10 @@ class Entity(Object):
                 self.animanager.play()
                 self.state = 'stay'
                 self.busy = False
+
+        if not keys[pygame.K_KP4] and not keys[pygame.K_KP6] and not keys[pygame.K_KP8] \
+            and not keys[pygame.K_KP2] and not keys[pygame.K_KP5]:
+            self.write_features = True
 
     def collision(self, objects, acceleration):
         self.position += acceleration
@@ -223,7 +242,8 @@ class Entity(Object):
                         if not self.friendly_fire and obj.family in self.friends:  # OFF FRIENDLY FIRE
                             continue
                         obj.health -= self.strength + self.strength_bonus
-                        if obj.type_ == 'entity' and not obj.immortal:
+                        obj.health = max(0, obj.health)
+                        if obj.container == 'entities' and not obj.immortal:
                                 self.satiety += 100  # vampire
                                 self.score += 100
 
@@ -258,11 +278,6 @@ class Entity(Object):
         dc.genome = Genome(self.genome_layers)
         return dc
 
-    def make_ghost(self):
-        self.ghost = True
-        self.isCollision = False
-        self.visible = False
-
     def encode_features(self, entities_around, decorations_around):
         health = min(self.health / (self.max_health + self.health_bonus), 1)
 
@@ -283,6 +298,8 @@ class Entity(Object):
             e_x, e_y = self.get_collision_rect().distance2d(enemy.get_collision_rect())
             e_x = e_x / (self.vision_area.x / 2)
             e_y = e_y / (self.vision_area.y / 2)
+            e_x = min(max(-1, e_x), 1)
+            e_y = min(max(-1, e_y), 1)
             e_health = min(enemy.health / (enemy.max_health + enemy.health_bonus), 1)
             e_direction = enemy.get_direction()
 
