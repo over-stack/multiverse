@@ -13,10 +13,10 @@ class EvolutionExample:
         self.shift = Vector2D(0, 0)
         self.spawning = True
         self.start = time.monotonic()
-        self.duration = 10
+        self.duration = 30
         self.epoch = 0
         self.current_population = 0
-        self.mutation_prob = 0.2
+        self.mutation_prob = 0.1
 
 
 class Evolution:

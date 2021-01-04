@@ -3,10 +3,13 @@ import random
 import pygame
 
 from object import Object
+from debug_object import DebugObject
 from my_libs import Rect, Vector2D
 import GUI
 from genome import Genome
 from copy import deepcopy
+
+import time
 
 COUNT_OF_BUTTONS = 323
 
@@ -31,15 +34,13 @@ class Entity(Object):
         self.satiety_bonus = 0
         self.satiety_speed_bonus = 0
 
-        self.score = 1
-
         self.busy = False
         self.request = False  # request for action
         self.ai = True
 
         self.friends = list()
         self.friendly_fire = False
-        self.friendly_collision = False
+        self.friendly_collision = True
 
         self.satiety_bar = GUI.Bar(self.get_rect().width, self.get_rect().height, 2,
                                    {100: (105, 17, 17)})
@@ -50,9 +51,13 @@ class Entity(Object):
         self.genome = Genome(layers=self.genome_layers)
 
         self.feature = None  ####################
-        self.features = list()
+        self.features = [0] * 9
         self.answers = list()
         self.write_features = True
+
+        self.ai_custom = False
+
+        #self.debug_object = DebugObject()
 
     def set_genome(self, genome):
         self.genome = genome.copy()
@@ -66,25 +71,83 @@ class Entity(Object):
         for i in range(len(env_states)):
             self.priorities[env_states[i]] = nums[i]
 
-    def ai_control(self, time, entities_around, decorations_around):
-        features = self.encode_features(entities_around, decorations_around)
-        x = self.genome.evaluate(features)
-        keys = self.decode_features(x)
+    def control(self, time_, entities_around, decorations_around, keys=list(), pass_=False):
+        #start = time.monotonic()
+        if not pass_:
+            self.features = self.encode_features(entities_around, decorations_around)
+        #end = time.monotonic()
+        if self.ai:
+            '''
+                    [health,
+                     self.get_direction(),
+                     e_x,
+                     e_y,
+                     e_health,
+                     e_direction,
+                     d_x,
+                     d_y,
+                     d_health]
+                     '''
+            if self.ai_custom:
+                '''
+                buttons = []
+                if True:  # health  features[0] >= features[4]
+                    if self.features[1] < 0:  # direction
+                        if self.features[2] < 0:  # dir to e
+                            if np.abs(self.features[2]) <= 0.12:  # e_x
+                                buttons.append(' ')  # attack
+                            else:
+                                buttons.append('a')  # left
+                        else:
+                            buttons.append('d')
+                            if np.abs(self.features[2]) <= 0.12:  # e_x
+                                buttons.append(' ')  # attack
+                    else:  # direction
+                        if self.features[2] > 0:  # dir to e
+                            if np.abs(self.features[2]) <= 0.12:  # e_x
+                                buttons.append(' ')  # attack
+                            else:
+                                buttons.append('d')  # left
+                        else:
+                            buttons.append('a')
+                            if np.abs(self.features[2]) <= 0.12:  # e_x
+                                buttons.append(' ')  # attack
 
-        #objects_around = entities_around + decorations_around  ######################
-        self.control(keys, time, entities_around, decorations_around)
+                    if self.features[3] < 0:
+                        if abs(self.features[3]) <= 0.12:
+                            buttons.append(' ')
+                        else:
+                            buttons.append('w')
+                    else:
+                        if abs(self.features[3]) <= 0.12:
+                            buttons.append(' ')
+                        else:
+                            buttons.append('s')
 
-    def control(self, keys, time, entities_around, decorations_around):
-        self.feature = self.encode_features(entities_around, decorations_around)
+                keys = [0 for i in range(COUNT_OF_BUTTONS)]
+                if buttons.count(' ') == 2:
+                    keys[ord(' ')] = 1
+                else:
+                    for b in buttons:
+                        if b != ' ':
+                            keys[ord(b)] = 1
+            '''
+            else:
+                x = self.genome.evaluate(self.features)
+                keys = self.decode_features(x)
+
         objects_around = entities_around + decorations_around
         if self.state != 'death':
-            self.keys_pressed(keys, time)
-            self.keys_released(keys, time)
+            self.keys_pressed(keys, time_)
+            self.keys_released(keys, time_)
 
         self.collision(objects_around, Vector2D(self.acceleration.x, 0))
         self.collision(objects_around, Vector2D(0, self.acceleration.y))
 
         self.interaction(objects_around)
+
+
+        #return end-start
 
     def keys_pressed(self, keys, time):
         if keys[pygame.K_d]:
@@ -122,25 +185,8 @@ class Entity(Object):
                 self.state = 'attack'
                 self.busy = True
                 self.request = True
-
+        '''
         if keys[pygame.K_KP4] and self.write_features:
-            self.features.append(self.feature)
-            self.answers.append([1, 0, 0, 0, 0])
-            self.write_features = False
-        if keys[pygame.K_KP6] and self.write_features:
-            self.features.append(self.feature)
-            self.answers.append([0, 1, 0, 0, 0])
-            self.write_features = False
-        if keys[pygame.K_KP8] and self.write_features:
-            self.features.append(self.feature)
-            self.answers.append([0, 0, 1, 0, 0])
-            self.write_features = False
-        if keys[pygame.K_KP2] and self.write_features:
-            self.features.append(self.feature)
-            self.answers.append([0, 0, 0, 1, 0])
-            self.write_features = False
-        if keys[pygame.K_KP5] and self.write_features:
-
             print(f'health = {self.feature[0]}')
             print(f'direction = {self.feature[1]}')
             print(f'e_x = {self.feature[2]}')
@@ -150,7 +196,62 @@ class Entity(Object):
             print(f'd_x = {self.feature[6]}')
             print(f'd_y = {self.feature[7]}')
             print(f'd_health = {self.feature[8]}')
-            print(self.feature)
+
+            self.features.append(self.feature)
+            self.answers.append([1, 0, 0, 0, 0])
+            self.write_features = False
+        if keys[pygame.K_KP6] and self.write_features:
+            print(f'health = {self.feature[0]}')
+            print(f'direction = {self.feature[1]}')
+            print(f'e_x = {self.feature[2]}')
+            print(f'e_y = {self.feature[3]}')
+            print(f'e_health = {self.feature[4]}')
+            print(f'e_direction = {self.feature[5]}')
+            print(f'd_x = {self.feature[6]}')
+            print(f'd_y = {self.feature[7]}')
+            print(f'd_health = {self.feature[8]}')
+
+            self.features.append(self.feature)
+            self.answers.append([0, 1, 0, 0, 0])
+            self.write_features = False
+        if keys[pygame.K_KP8] and self.write_features:
+            print(f'health = {self.feature[0]}')
+            print(f'direction = {self.feature[1]}')
+            print(f'e_x = {self.feature[2]}')
+            print(f'e_y = {self.feature[3]}')
+            print(f'e_health = {self.feature[4]}')
+            print(f'e_direction = {self.feature[5]}')
+            print(f'd_x = {self.feature[6]}')
+            print(f'd_y = {self.feature[7]}')
+            print(f'd_health = {self.feature[8]}')
+
+            self.features.append(self.feature)
+            self.answers.append([0, 0, 1, 0, 0])
+            self.write_features = False
+        if keys[pygame.K_KP2] and self.write_features:
+            print(f'health = {self.feature[0]}')
+            print(f'direction = {self.feature[1]}')
+            print(f'e_x = {self.feature[2]}')
+            print(f'e_y = {self.feature[3]}')
+            print(f'e_health = {self.feature[4]}')
+            print(f'e_direction = {self.feature[5]}')
+            print(f'd_x = {self.feature[6]}')
+            print(f'd_y = {self.feature[7]}')
+            print(f'd_health = {self.feature[8]}')
+
+            self.features.append(self.feature)
+            self.answers.append([0, 0, 0, 1, 0])
+            self.write_features = False
+        if keys[pygame.K_KP5] and self.write_features:
+            print(f'health = {self.feature[0]}')
+            print(f'direction = {self.feature[1]}')
+            print(f'e_x = {self.feature[2]}')
+            print(f'e_y = {self.feature[3]}')
+            print(f'e_health = {self.feature[4]}')
+            print(f'e_direction = {self.feature[5]}')
+            print(f'd_x = {self.feature[6]}')
+            print(f'd_y = {self.feature[7]}')
+            print(f'd_health = {self.feature[8]}')
 
             self.features.append(self.feature)
             self.answers.append([0, 0, 0, 0, 1])
@@ -163,6 +264,7 @@ class Entity(Object):
             with open('answers.txt', 'w', encoding='utf-8') as f:
                 for answer in self.answers:
                     f.write(' '.join(str(i) for i in answer) + '\n')
+        '''
 
     def keys_released(self, keys, time):
         if not (keys[pygame.K_d] or keys[pygame.K_a] or keys[pygame.K_w] or keys[pygame.K_s] or keys[pygame.K_SPACE]):
@@ -192,10 +294,11 @@ class Entity(Object):
                 self.animanager.play()
                 self.state = 'stay'
                 self.busy = False
-
+        ''''
         if not keys[pygame.K_KP4] and not keys[pygame.K_KP6] and not keys[pygame.K_KP8] \
             and not keys[pygame.K_KP2] and not keys[pygame.K_KP5]:
             self.write_features = True
+        '''
 
     def collision(self, objects, acceleration):
         self.position += acceleration
@@ -236,6 +339,7 @@ class Entity(Object):
             else:
                 area = Rect(rect.left - self.attack_range.x / 2, rect.center.y,
                             self.attack_range.x, self.attack_range.y, isCenter=True)
+            #self.debug_object.add(area, (255, 0, 0))
             for obj in objects_around:
                 if self.id_ != obj.id_:
                     if obj.get_rect().intersects(area):
@@ -244,8 +348,9 @@ class Entity(Object):
                         obj.health -= self.strength + self.strength_bonus
                         obj.health = max(0, obj.health)
                         if obj.container == 'entities' and not obj.immortal:
-                                self.satiety += 100  # vampire
-                                self.score += 100
+                                #self.satiety += 100  # vampire
+                                self.health += (self.regeneration_speed + self.regeneration_speed_bonus)
+                                self.score += 1000
 
         self.request = False
 
@@ -264,13 +369,17 @@ class Entity(Object):
             self.satiety = self.max_satiety + self.satiety_bonus
 
         if self.satiety > self.min_satiety:
-            self.health += (self.regeneration_speed + self.regeneration_speed_bonus) * time
+            pass
+            #self.health += (self.regeneration_speed + self.regeneration_speed_bonus) * time
 
     def draw(self, surface, cam_frame):
         Object.draw(self, surface, cam_frame)
         if not self.visible:
             return
         self.satiety_bar.draw(surface, self.satiety, self.max_satiety, self.satiety_bonus, self.position, cam_frame)
+
+        #self.debug_object.draw(surface, cam_frame)
+        #self.debug_object.erase()
 
     def copy(self):
         dc = deepcopy(self)

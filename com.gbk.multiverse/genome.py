@@ -13,18 +13,32 @@ class Genome:
     def evaluate(self, features):
         x = np.array(features)
         for layer in self.network:
-            x = self.sigmoid(x.dot(layer))
+            '''
+            print('************')
+            print(x)
+            print('---------------')
+            print(layer.shape)
+            print(layer)
+            print('************')
+            '''
+            x = self.relu(x.dot(layer))
         return x
 
     def sigmoid(self, x):
         result = 1 / (1 + np.exp(-x))
         return result
 
+    def relu(self, x):
+        x[x<0] = 0
+        return x
+
     def save(self, filename):
         np.save(filename, self.network)
 
     def load(self, filename):
-        self.network = np.load(filename)
+        weights = np.load(filename, allow_pickle=True)
+        for i in range(len(self.network)):
+            self.network[i] = weights[i][0]
 
     def copy(self):
         return deepcopy(self)

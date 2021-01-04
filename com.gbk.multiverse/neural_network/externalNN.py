@@ -1,6 +1,5 @@
 import numpy as np
 import warnings
-import re
 
 file_tests = open('train/features.txt', 'r')
 file_answers = open('train/answers.txt', 'r')
@@ -25,6 +24,13 @@ def sigmoid(x, deriv=False):
 
 
 def main():
+    omega = np.load('weights/weightsNN.npy', allow_pickle=True)
+    for layer in omega:
+        print('************')
+        print(layer.shape)
+        print(layer)
+        print('************')
+
     inputLayerSize = 9  # int(input("InputLayerSize: "))
     countOfHiddenLayers = 3  # int(input("CountOfHiddenLayers: "))
     hiddenLayerSize = [100, 100, 50, 50]  # [int(j) for j in input("HiddenLayerSize: ").split()]
@@ -32,12 +38,12 @@ def main():
     countOfIterations = int(input("CountOfIterations: "))
 
     lines_tests = file_tests.read()
-    tests = [[float(j) for j in re.split('\s+', line)] for line in lines_tests.split('\n')]
+    tests = [[float(j) for j in line.split()] for line in lines_tests.split('\n')]
     file_tests.close()
     X = np.array(tests)
 
     lines_answers = file_answers.read()
-    answers = [[float(j) for j in re.split('\s+', line)] for line in lines_answers.split('\n')]
+    answers = [[float(j) for j in line.split()] for line in lines_answers.split('\n')]
     file_answers.close()
     Y = np.array(answers)
 
@@ -69,6 +75,7 @@ def main():
         if i % 1000 == 0:
             print('Error: ', str(np.mean(np.abs(error[countOfHiddenLayers + 1]))))
 
+    print(w)
     np.save('weights/weights.npy', w)
 
     while True:

@@ -6,6 +6,21 @@ from animationManager import AnimationManager
 from my_libs import Rect, Vector2D
 import GUI
 
+'''
+class DebugObject:
+    def __int__(self, delta_position, delta_size, color):
+        self.delta_position = delta_position
+        self.delta_size = delta_size
+        self.color = color
+
+    def draw(self, surface, rect, cam_scroll):
+        position = [rect.left + self.delta_position.x + cam_scroll.x,
+                    rect.top + self.delta_position.y + cam_scroll.y]
+        size = [rect.width + self.delta_size.x, rect.height + self.delta_size.y]
+
+        pygame.draw.rect(surface, self.color, position + size)
+'''
+
 
 class Object:
     def __init__(self, animanager, max_health, family='single', container=None):
@@ -14,7 +29,7 @@ class Object:
 
         self.max_health = max_health
         self.health = max_health
-        self.regeneration_speed = 0.7
+        self.regeneration_speed = 40  # 0.7
 
         self.health_bonus = 0.
         self.regeneration_speed_bonus = 0.
@@ -27,6 +42,8 @@ class Object:
         self.alive = True
         self.visible = True
         self.immortal = False
+
+        self.score = 1
 
         self.animanager.set(self.state)
         self.health_bar = GUI.Bar(self.get_rect().width, self.get_rect().height + 8, 2,
@@ -54,6 +71,10 @@ class Object:
         self.animanager.draw(surface, self.get_rect().topleft, cam_scroll)
         self.health_bar.draw(surface, self.health, self.max_health, self.health_bonus,
                              self.get_rect().center, cam_scroll)
+
+        #rect = self.get_collision_rect()
+        #pygame.draw.rect(surface, (0, 255, 0), (rect.left + cam_scroll.x, rect.top + cam_scroll.y,
+                                                #rect.width, rect.height))
 
     def get_rect(self, toDraw=True):
         if toDraw:
