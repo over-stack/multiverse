@@ -12,7 +12,7 @@ from spawn import Spawn, SpawnExample
 from evolution import Evolution, EvolutionExample
 from genome import Genome
 
-from my_libs import Rect, Vector2D
+from my_libs import Rect, Vector2D, InterManager
 from thread_system import VCIThread
 
 from time import monotonic
@@ -51,19 +51,31 @@ from time import monotonic
 # add serialization
 # add gui
 
+import os
+import platform
+
 
 class Game:
     def __init__(self, screen_size, title):
+        #if platform.system() == 'Windows':
+            #os.environ['SDL_VIDEODRIVER'] = 'windib'
+        #os.environ['SDL_VIDEODRIVER'] = 'dummy'
+
         self.screen_size = screen_size
         self.title = title
-        self.fps = 60
+        self.fps = 200
 
         pygame.init()
+        print(pygame.display.list_modes())
+        print(pygame.display.get_driver())
         self.window = pygame.display.set_mode(screen_size.get_tuple(),
-                                              pygame.HWSURFACE | pygame.DOUBLEBUF)  # only for draw the canvas
+                                              pygame.HWSURFACE | pygame.DOUBLEBUF)  # only for draw the canvas | pygame.OPENGL
         self.canvas = self.window.copy()  # used to draw
 
         pygame.display.set_caption(title)
+
+        #pygame.event.set_allowed([pygame.QUIT, pKEYDOWN, KEYUP])
+
 
         self.hero = None
 
@@ -75,8 +87,6 @@ class Game:
         self.entities = list()
         self.genomes_files = dict()
 
-        self.include_resources()
-        self.animation_managers()
 
         self.sum_time = {'VCI': 0, 'Update': 0, 'Draw': 0}
         self.N = 0
@@ -84,11 +94,18 @@ class Game:
         self.frame = 0
         self.num_threads = 4
 
+        self.frames = 0
+        self.seconds = monotonic()
+
         self.cam = Camera(screen_size=self.screen_size, coefficient=2)
+
+        self.include_resources()
+        self.animation_managers()
+
         self.spawn = Spawn({'decorations': self.decorations, 'entities': self.entities})
         self.evolution = Evolution(self.spawn)
         #self.game_env = Environment()
-        self.game_world = World(filename=f'{self.resources["tiny-rpg"]}tileset.png', size=Vector2D(500, 500),
+        self.game_world = World(filename=f'{self.resources["tiny-rpg"]}tileset.png', size=Vector2D(5000, 5000),
                                 tile_size=Vector2D(16, 16))
         self.game_world.load_map(self.game_world.generate_world())
         self.sun = Sun(self.cam.frame.width, self.cam.frame.height)
@@ -106,51 +123,53 @@ class Game:
 
         self.train = list()
 
+        self.inter_manager = InterManager()
+
     def include_resources(self):
         self.resources['goth'] = 'resources/gothicvania patreon collection/'
         self.resources['tiny-rpg'] = 'resources/tiny-RPG-forest-files/PNG/environment/'
 
         self.sheets['tree'] = dict()
-        self.sheets['tree']['stay'] = pygame.image.load(f'{self.resources["tiny-rpg"]}/sliced-objects/tree-pink.png')
+        self.sheets['tree']['stay'] = pygame.transform.scale2x(pygame.image.load(f'{self.resources["tiny-rpg"]}/sliced-objects/tree-pink.png').convert_alpha())
 
         self.sheets['tree-dried'] = dict()
-        self.sheets['tree-dried']['stay'] = pygame.image.load(f'{self.resources["tiny-rpg"]}/sliced-objects/tree-dried.png')
+        self.sheets['tree-dried']['stay'] = pygame.transform.scale2x(pygame.image.load(f'{self.resources["tiny-rpg"]}/sliced-objects/tree-dried.png').convert_alpha())
 
         self.sheets['monument'] = dict()
-        self.sheets['monument']['stay'] = pygame.image.load(f'{self.resources["tiny-rpg"]}/sliced-objects/rock-monument.png')
+        self.sheets['monument']['stay'] = pygame.transform.scale2x(pygame.image.load(f'{self.resources["tiny-rpg"]}/sliced-objects/rock-monument.png').convert_alpha())
 
         self.sheets['hero'] = dict()
-        self.sheets['hero']['stay'] = pygame.image.load(
-            f'{self.resources["goth"]}Gothic-hero-Files/PNG/gothic-hero-idle.png')
-        self.sheets['hero']['attack'] = pygame.image.load(
-            f'{self.resources["goth"]}Gothic-hero-Files/PNG/gothic-hero-attack.png')
-        self.sheets['hero']['run'] = pygame.image.load(
-            f'{self.resources["goth"]}Gothic-hero-Files/PNG/gothic-hero-run.png')
+        self.sheets['hero']['stay'] = pygame.transform.scale2x(pygame.image.load(
+            f'{self.resources["goth"]}Gothic-hero-Files/PNG/gothic-hero-idle.png').convert_alpha())
+        self.sheets['hero']['attack'] = pygame.transform.scale2x(pygame.image.load(
+            f'{self.resources["goth"]}Gothic-hero-Files/PNG/gothic-hero-attack.png').convert_alpha())
+        self.sheets['hero']['run'] = pygame.transform.scale2x(pygame.image.load(
+            f'{self.resources["goth"]}Gothic-hero-Files/PNG/gothic-hero-run.png').convert_alpha())
 
         self.sheets['ghost'] = dict()
-        self.sheets['ghost']['stay'] = pygame.image.load(f'{self.resources["goth"]}Ghost-Files/PNG/ghost-idle.png')
-        self.sheets['ghost']['walk'] = pygame.image.load(f'{self.resources["goth"]}Ghost-Files/PNG/ghost-shriek.png')
-        self.sheets['ghost']['death'] = pygame.image.load(f'{self.resources["goth"]}Ghost-Files/PNG/ghost-vanish.png')
+        self.sheets['ghost']['stay'] = pygame.transform.scale2x(pygame.image.load(f'{self.resources["goth"]}Ghost-Files/PNG/ghost-idle.png').convert_alpha())
+        self.sheets['ghost']['walk'] = pygame.transform.scale2x(pygame.image.load(f'{self.resources["goth"]}Ghost-Files/PNG/ghost-shriek.png').convert_alpha())
+        self.sheets['ghost']['death'] = pygame.transform.scale2x(pygame.image.load(f'{self.resources["goth"]}Ghost-Files/PNG/ghost-vanish.png').convert_alpha())
 
         self.sheets['dog'] = dict()
-        self.sheets['dog']['stay'] = pygame.image.load(
-            f'{self.resources["goth"]}Hell-Hound-Files/PNG/hell-hound-idle.png')
-        self.sheets['dog']['walk'] = pygame.image.load(
-            f'{self.resources["goth"]}Hell-Hound-Files/PNG/hell-hound-walk.png')
+        self.sheets['dog']['stay'] = pygame.transform.scale2x(pygame.image.load(
+            f'{self.resources["goth"]}Hell-Hound-Files/PNG/hell-hound-idle.png').convert_alpha())
+        self.sheets['dog']['walk'] = pygame.transform.scale2x(pygame.image.load(
+            f'{self.resources["goth"]}Hell-Hound-Files/PNG/hell-hound-walk.png').convert_alpha())
 
         self.sheets['demon'] = dict()
-        self.sheets['demon']['stay'] = pygame.image.load(
-            f'{self.resources["goth"]}demon-Files/PNG/demon-idle.png')
-        self.sheets['demon']['attack'] = pygame.image.load(
-            f'{self.resources["goth"]}demon-Files/PNG/demon-attack.png')
+        self.sheets['demon']['stay'] = pygame.transform.scale2x(pygame.image.load(
+            f'{self.resources["goth"]}demon-Files/PNG/demon-idle.png').convert_alpha())
+        self.sheets['demon']['attack'] = pygame.transform.scale2x(pygame.image.load(
+            f'{self.resources["goth"]}demon-Files/PNG/demon-attack.png').convert_alpha())
 
         self.sheets['hell-beast'] = dict()
-        self.sheets['hell-beast']['stay'] = pygame.image.load(
-            f'{self.resources["goth"]}Hell-Beast-Files\PNG\with-stroke\hell-beast-idle.png')
-        self.sheets['hell-beast']['attack'] = pygame.image.load(
-            f'{self.resources["goth"]}Hell-Beast-Files\PNG\with-stroke\hell-beast-breath.png')
+        self.sheets['hell-beast']['stay'] = pygame.transform.scale2x(pygame.image.load(
+            f'{self.resources["goth"]}Hell-Beast-Files/PNG/with-stroke/hell-beast-idle.png').convert_alpha())
+        self.sheets['hell-beast']['attack'] = pygame.transform.scale2x(pygame.image.load(
+            f'{self.resources["goth"]}Hell-Beast-Files/PNG/with-stroke/hell-beast-breath.png').convert_alpha())
 
-        self.genomes_files['genome1'] = 'neural_network\weights\weights.npy'
+        self.genomes_files['genome1'] = 'neural_network/weights/weights.npy'
 
     def animation_managers(self):
         self.animanagers['tree'] = AnimationManager()
@@ -259,7 +278,7 @@ class Game:
             if example.container == 'entity':
                 example.generate_random_priorities(env_states=self.game_env.get_states())
 
-        self.evolution.add_example(EvolutionExample(self.examples['hell-beast'], min_=2, max_=60,
+        self.evolution.add_example(EvolutionExample(self.examples['hell-beast'], min_=2, max_=20,
                                                                   area=self.game_world.get_area()),
                                    start_genome_file='neural_network/weights/weightsNN.npy')
 
@@ -299,8 +318,9 @@ class Game:
         clock = pygame.time.Clock()
         run = True
         while run:
-            clock.tick(self.fps)
+            clock.tick(0)
             time = clock.get_time()
+            #print(time)
             time = time / 80  # game speed
 
             for event in pygame.event.get():
@@ -317,58 +337,80 @@ class Game:
             self.frame += 1
             if self.frame >= self.frame_mod:
                 self.frame = 0
-            ##print('VCI:', self.sum_time['VCI']/self.N)
-            #print('Update:', self.sum_time['Update'] / self.N)
-            #print('Draw:', self.sum_time['Draw'] / self.N)
-            #print('-------------------------------------')
+
+            self.frames += 1
+            print('FPS:', self.frames // (monotonic() - self.seconds))
+            print('VCI:', self.sum_time['VCI']/self.N)
+            print('Update:', self.sum_time['Update'] / self.N)
+            print('Draw:', self.sum_time['Draw'] / self.N)
+            print('Count of objects:', len(self.decorations) + len(self.entities))
+            print('-------------------------------------')
 
         pygame.quit()
 
     # vision controlling and interaction
     def vci(self, time):
+        start = monotonic()
 
+        self.inter_manager.make_table(self.entities)
 
+        '''
         threads = list()
         for i in range(self.num_threads):
             count = len(self.entities) // self.num_threads
-            threads.append(VCIThread(self.entities, self.decorations, time,
+            threads.append(VCIThread(self.inter_manager.table, self.entities, time,
                                      range(i * count, (i+1) * count),
                                      self.frame_mod, self.frame))
             threads[i].start()
-        start = monotonic()
         '''
+
+
+        sum_ = 0
+
         for i in range(len(self.entities)):
             # Vision
             ent = self.entities[i]
-            if ent.ai:
-                rect = ent.get_rect()
-                area = Rect(rect.center.x, rect.center.y,
-                            ent.vision_area.x, ent.vision_area.y, isCenter=True)
-                entities_around = [_ for _ in self.entities if _.alive and _.get_rect().intersects(area) and _ is not ent]
-                decorations_around = [_ for _ in self.decorations if _.get_rect().intersects(area)]
+
+            if True:
+                #entities_around = [_ for _ in self.entities if _.alive and _.get_rect().intersects(area) and _ is not ent]
+                entities_around = self.inter_manager.table[ent]
+                #decorations_around = [_ for _ in self.decorations if _.get_rect().intersects(area)]
                 #objects_around = entities_around + decorations_around
                 #world_around = self.game_world.get_world_around(ent.get_rect().center)
                 #self.game_env.apply(entity=ent, objects_around=objects_around)
 
-                ent.control(time, entities_around, decorations_around, i % self.frame_mod != self.frame)
+
+                if ent.ai:
+                    #start = monotonic()
+                    ent.control(time, entities_around, [], i % self.frame_mod != self.frame)
+                    #end = monotonic()
+                    #sum_ += end - start
+                else:
+                    keys = pygame.key.get_pressed()
+                    if keys[pygame.K_ESCAPE]:
+                        exit(0)
+                    if keys[pygame.K_BACKSPACE]:
+                        self.allow_draw = not self.allow_draw
+                    ent.control(time, entities_around, [], keys, i % self.frame_mod != self.frame)
+
+
         '''
-        rect = self.hero.get_rect()
-        area = Rect(rect.center.x, rect.center.y,
-                    self.hero.vision_area.x, self.hero.vision_area.y, isCenter=True)
-        entities_around = [_ for _ in self.entities if _.alive and _.get_rect().intersects(area) and _ is not self.hero]
-        decorations_around = [_ for _ in self.decorations if _.get_rect().intersects(area)]
+        entities_around = self.inter_manager.table[self.hero]
         keys = pygame.key.get_pressed()
         if keys[pygame.K_ESCAPE]:
             exit(0)
         if keys[pygame.K_BACKSPACE]:
             self.allow_draw = not self.allow_draw
-        self.hero.control(time, entities_around, decorations_around, keys)
+        self.hero.control(time, entities_around, [], keys)
+
 
         for thread in threads:
             thread.join()
+        '''
 
         end = monotonic()
-        self.sum_time['VCI'] += end - start
+        sum_ = end - start
+        self.sum_time['VCI'] += sum_
 
     def update(self, time):
         start = monotonic()
@@ -409,9 +451,11 @@ class Game:
         #self.canvas.blit(self.sun.img, (self.cam.frame.topleft.x + self.cam.get_scroll().x,
                                         #self.cam.frame.topleft.y + self.cam.get_scroll().y))
 
-        self.window.blit(pygame.transform.scale(self.canvas, [self.screen_size.x * self.cam.coefficient,
-                                                              self.screen_size.y * self.cam.coefficient]),
-                         (-self.cam.frame.width, -self.cam.frame.height))
+        #self.window.blit(pygame.transform.scale(self.canvas, [self.screen_size.x * self.cam.coefficient,
+                                                              #self.screen_size.y * self.cam.coefficient]),
+                         #(-self.cam.frame.width, -self.cam.frame.height))
+
+        self.window.blit(self.canvas, (0, 0))
         end = monotonic()
         self.sum_time['Draw'] += end - start
 

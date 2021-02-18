@@ -72,22 +72,21 @@ class Object:
         self.health_bar.draw(surface, self.health, self.max_health, self.health_bonus,
                              self.get_rect().center, cam_scroll)
 
-        #rect = self.get_collision_rect()
-        #pygame.draw.rect(surface, (0, 255, 0), (rect.left + cam_scroll.x, rect.top + cam_scroll.y,
-                                                #rect.width, rect.height))
-
-    def get_rect(self, toDraw=True):
-        if toDraw:
-            animation = self.animanager.get()
-        else:
-            animation = self.animanager.get('stay')
+    def get_rect(self, toDraw=True): #get_draw_rect
+        #if toDraw:
+        #    animation = self.animanager.get()
+        #else:
+        #    animation = self.animanager.get('stay')
+        animation = self.animanager.get()
         return Rect(self.position.x, self.position.y, animation.width, animation.height, isCenter=True)
 
     def get_collision_rect(self):
-        rect = self.get_rect(toDraw=False)
-        animation = self.animanager.get(name='stay')
-        return Rect(rect.left + animation.shift, rect.bottom - animation.depth,
-                    rect.width - 2 * animation.shift, animation.depth)
+        #animation = self.animanager.get(name='stay')
+        #return Rect(self.position.x + animation.shift, self.position.y - animation.depth,
+                    #animation.width - 2 * animation.shift, animation.depth, isCenter=True)
+        rect = self.animanager.get_collision_rect()
+        rect.move_to(self.position.x, self.position.y)
+        return rect
 
     def copy(self):
         dc = deepcopy(self)

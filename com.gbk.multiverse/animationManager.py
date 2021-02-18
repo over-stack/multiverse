@@ -14,6 +14,7 @@ class AnimationManager:
         self.flipped = False
         self.defaultFlipped = defaultFlipped
         self.simple_drawing = False
+        self.collision_rect = Rect(0, 0, 40, 16)
 
     def create(self, name, sheet, cols, rows, count, speed, looped=False):
         self.animations[name] = Animation(sheet, cols, rows, count, speed, looped)
@@ -54,6 +55,9 @@ class AnimationManager:
         if len(name) == 0 or name not in self.animations.keys():
             return self.animations[self.currentAnimation]
         return self.animations[name]
+
+    def get_collision_rect(self):
+        return self.collision_rect
 
     def flip(self, flipped):
         self.flipped = flipped

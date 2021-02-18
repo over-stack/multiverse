@@ -19,12 +19,19 @@ class Vector2D:
     def get_tuple(self):
         return self.x, self.y
 
+    def is_null(self):
+        if self.x == 0 and self.y == 0:
+            return True
+
 
 class Rect:
     def __init__(self, x, y, width, height, isCenter=False):
         self.width = width
         self.height = height
+        self.center = Vector2D(0, 0)
+        self.topleft = Vector2D(0, 0)
         self.move_to(x, y, isCenter)
+        #self.last_intersection = Vector2D(0, 0)
 
     def __repr__(self):
         return f'Left: {self.left}, Top: {self.top}, Width: {self.width}, Height: {self.height}, Center: {self.center}'
@@ -50,7 +57,8 @@ class Rect:
 
     def move_to(self, x, y, isCenter=False):
         if isCenter:
-            self.center = Vector2D(x, y)
+            self.center.x = x
+            self.center.y = y
             self.left = self.center.x - self.width / 2
             self.top = self.center.y - self.height / 2
         else:
@@ -60,7 +68,8 @@ class Rect:
 
         self.right = self.left + self.width
         self.bottom = self.top + self.height
-        self.topleft = Vector2D(self.left, self.top)
+        self.topleft.x = self.left
+        self.topleft.y = self.top
 
     def get_tuple(self):
         return self.left, self.top, self.width, self.height
@@ -76,3 +85,35 @@ class Rect:
             else:
                 return np.sign(b) * np.pi / 2, np.sqrt(b*b)
         return np.arctan(b/a), np.sqrt(a*a + b*b)
+
+
+class Circle:
+    def __init__(self, x, y, radius):
+        self.x = x
+        self.y = y
+        self.radius = radius
+
+    def intersects(self, x, y):
+        if (x - self.x)**2 + (y - self.y) ** 2 <= self.radius ** 2:
+            return True
+
+
+class InterManager:
+    def __init__(self):
+        self.table = dict()
+        self.circle = Circle(0, 0, 360)
+
+    def make_table(self, objects):
+        for obj in objects:
+            self.table[obj] = list()
+
+        for i in range(len(objects)):
+            position = objects[i].position
+            self.circle.x = position.x
+            self.circle.y = position.y
+            for j in range(i+1, len(objects)):
+                obj_position = objects[j].position
+                if self.circle.intersects(obj_position.x, obj_position.y):
+                    self.table[objects[i]].append(objects[j])
+                    self.table[objects[j]].append(objects[i])
+

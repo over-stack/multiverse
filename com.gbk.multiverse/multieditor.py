@@ -3,15 +3,21 @@ from camera import Camera
 from my_libs import Vector2D
 from GUI import Button, Layer, Window
 from game import *
+from time import monotonic
+
 
 def foo():
     print('*********')
+
 
 class MultiEditor:
     def __init__(self, screen_size, title):
         self.screen_size = screen_size
         self.title = title
-        self.fps = 60
+        self.fps = 120
+
+        self.frames = 0
+        self.seconds = monotonic()
 
         pygame.init()
         self.window = pygame.display.set_mode(screen_size.get_tuple(),
@@ -56,7 +62,7 @@ class MultiEditor:
         clock = pygame.time.Clock()
         run = True
         while run:
-            clock.tick(self.fps)
+            #clock.tick(self.fps)
             time = clock.get_time()
             time = time / 80  # game speed
 
@@ -76,6 +82,9 @@ class MultiEditor:
 
             self.update(time)
             self.draw()
+
+            self.frames += 1
+            print('FPS:', self.frames // (monotonic() - self.seconds))
 
         pygame.quit()
 

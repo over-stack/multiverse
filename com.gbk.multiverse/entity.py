@@ -3,7 +3,7 @@ import random
 import pygame
 
 from object import Object
-from debug_object import DebugObject
+#from debug_object import DebugObject
 from my_libs import Rect, Vector2D
 import GUI
 from genome import Genome
@@ -136,18 +136,21 @@ class Entity(Object):
                 x = self.genome.evaluate(self.features)
                 keys = self.decode_features(x)
 
+
         objects_around = entities_around + decorations_around
+        start = time.monotonic()
+
         if self.state != 'death':
             self.keys_pressed(keys, time_)
             self.keys_released(keys, time_)
 
-        self.collision(objects_around, Vector2D(self.acceleration.x, 0))
-        self.collision(objects_around, Vector2D(0, self.acceleration.y))
+        self.collision(objects_around, self.acceleration)
 
         self.interaction(objects_around)
+        end = time.monotonic()
 
 
-        #return end-start
+        return end-start
 
     def keys_pressed(self, keys, time):
         if keys[pygame.K_d]:
@@ -301,29 +304,70 @@ class Entity(Object):
         '''
 
     def collision(self, objects, acceleration):
-        self.position += acceleration
+        '''
+        allow_interaction = False
+        if not self.busy or not self.request:
+            if self.state == 'attack':
+                if self.animanager.get_elapsed_time() >= 0.6:
+                    allow_interaction = True
+
+                    rect = self.get_rect(toDraw=False)
+                    if not self.animanager.flipped:
+                        area = Rect(rect.right + self.attack_range.x / 2, rect.center.y,
+                                    self.attack_range.x, self.attack_range.y, isCenter=True)
+                    else:
+                        area = Rect(rect.left - self.attack_range.x / 2, rect.center.y,
+                                    self.attack_range.x, self.attack_range.y, isCenter=True)
+        '''
+
+        collision_rect = self.get_collision_rect()
+        next_collision_rect = self.get_collision_rect()
+        next_collision_rect.move(acceleration.x, acceleration.y)
+
         if not self.isCollision:
             return
 
-        collision_rect = self.get_collision_rect()
         for object_ in objects:
-            if not self.friendly_collision and object_.family in self.friends:  # OFF FRIENDLY COLLISION
+            if not object_.isCollision:
                 continue
-            if not object_.isCollision or self.id_ == object_.id_:
+            if not self.friendly_collision and object_.family in self.friends:
                 continue
             object_collision_rect = object_.get_collision_rect()
-            if not collision_rect.intersects(object_collision_rect):
+            if not next_collision_rect.intersects(object_collision_rect):
                 continue
 
-            if acceleration.x > 0:
-                self.position.x += object_collision_rect.left - collision_rect.right
-            elif acceleration.x < 0:
-                self.position.x += object_collision_rect.right - collision_rect.left
+            next_collision_rect.move(0, -self.acceleration.y)
+            if next_collision_rect.intersects(object_collision_rect):
+                if acceleration.x > 0:
+                    acceleration.x = object_collision_rect.left - collision_rect.right
+                elif acceleration.x < 0:
+                    acceleration.x = object_collision_rect.right - collision_rect.left
+                collision_rect.move(acceleration.x, 0)
+                next_collision_rect.move_to(collision_rect.center.x, collision_rect.center.y, isCenter=True)
 
-            if acceleration.y > 0:
-                self.position.y += object_collision_rect.top - collision_rect.bottom
-            elif acceleration.y < 0:
-                self.position.y += object_collision_rect.bottom - collision_rect.top
+            next_collision_rect.move(0, self.acceleration.y)
+            if next_collision_rect.intersects(object_collision_rect):
+                if acceleration.y > 0:
+                    acceleration.y = object_collision_rect.top - collision_rect.bottom
+                elif acceleration.y < 0:
+                    acceleration.y = object_collision_rect.bottom - collision_rect.top
+                collision_rect.move(0, acceleration.y)
+                next_collision_rect.move_to(collision_rect.center.x, collision_rect.center.y, isCenter=True)
+
+            '''
+            if allow_interaction:
+                if object_.get_rect().intersects(area):
+                    if not self.friendly_fire and object_.family in self.friends:  # OFF FRIENDLY FIRE
+                        continue
+                    object_.health -= self.strength + self.strength_bonus
+                    object_.health = max(0, object_.health)
+                    if object_.container == 'entities' and not object_.immortal:
+                        # self.satiety += 100  # vampire
+                        self.health += (self.regeneration_speed + self.regeneration_speed_bonus)
+                        self.score += 1000
+            '''
+
+        self.position += acceleration
 
     def interaction(self, objects_around):
         if not (self.busy and self.request):
@@ -339,18 +383,16 @@ class Entity(Object):
             else:
                 area = Rect(rect.left - self.attack_range.x / 2, rect.center.y,
                             self.attack_range.x, self.attack_range.y, isCenter=True)
-            #self.debug_object.add(area, (255, 0, 0))
             for obj in objects_around:
-                if self.id_ != obj.id_:
-                    if obj.get_rect().intersects(area):
-                        if not self.friendly_fire and obj.family in self.friends:  # OFF FRIENDLY FIRE
-                            continue
-                        obj.health -= self.strength + self.strength_bonus
-                        obj.health = max(0, obj.health)
-                        if obj.container == 'entities' and not obj.immortal:
-                                #self.satiety += 100  # vampire
-                                self.health += (self.regeneration_speed + self.regeneration_speed_bonus)
-                                self.score += 1000
+                if obj.get_rect().intersects(area):
+                    if not self.friendly_fire and obj.family in self.friends:  # OFF FRIENDLY FIRE
+                        continue
+                    obj.health -= self.strength + self.strength_bonus
+                    obj.health = max(0, obj.health)
+                    if obj.container == 'entities' and not obj.immortal:
+                            #self.satiety += 100  # vampire
+                            self.health += (self.regeneration_speed + self.regeneration_speed_bonus)
+                            self.score += 1000
 
         self.request = False
 
