@@ -1,6 +1,8 @@
 import string
 import numpy as np
 
+from copy import deepcopy
+
 MAP_SYMBOLS = list(filter(lambda x: x not in string.ascii_letters, string.printable))
 OBJECT_SYMBOLS = list(string.ascii_lowercase)
 
@@ -13,8 +15,14 @@ class Vector2D:
     def __add__(self, other):
         return Vector2D(self.x + other.x, self.y + other.y)
 
+    def __mul__(self, other):
+        return self.x * other.x + self.y * other.y
+
     def __repr__(self):
         return f'X: {self.x}, Y: {self.y}'
+
+    def length(self):
+        return (self.x * self.x + self.y * self.y) ** 0.5
 
     def get_tuple(self):
         return self.x, self.y
@@ -22,6 +30,9 @@ class Vector2D:
     def is_null(self):
         if self.x == 0 and self.y == 0:
             return True
+
+    def copy(self):
+        return deepcopy(self)
 
 
 class Rect:
@@ -42,6 +53,7 @@ class Rect:
             intersects = False
         elif self.right <= rect.left or self.left >= rect.right:
             intersects = False
+
         return intersects
 
     def move(self, x, y):
@@ -77,6 +89,9 @@ class Rect:
     def distance2d(self, rect):
         return rect.center.x - self.center.x, rect.center.y - self.center.y
 
+    def v2_distance2d(self, rect):
+        return (rect.center.x - self.center.x) ** 2 + (rect.center.y - self.center.y) ** 2
+
     def distance_polar(self, rect):
         a, b = self.distance2d(rect)
         if a == 0:
@@ -85,6 +100,9 @@ class Rect:
             else:
                 return np.sign(b) * np.pi / 2, np.sqrt(b*b)
         return np.arctan(b/a), np.sqrt(a*a + b*b)
+
+    def copy(self):
+        return deepcopy(self)
 
 
 class Circle:
@@ -98,22 +116,106 @@ class Circle:
             return True
 
 
+class Node:
+    def __init__(self, decoration=None, value=None):
+        self.decoration = decoration
+        self.value = value
+        self.next = None
+
+
+class LinkedList:
+    def __init__(self):
+        self.head = None
+
+    def addSorted(self, decoration, value):
+        new_node = Node(decoration, value)
+        if self.head is None:
+            self.head = new_node
+            return
+
+        if value < self.head.value:
+            new_node.next = self.head
+            self.head = new_node
+            return
+
+        current = self.head
+        while (current):
+            if current.next:
+                if value < current.next.value:
+                    new_node.next = current.next
+                    current.next = new_node
+                    return
+                else:
+                    current = current.next
+            else:
+                current.next = new_node
+                return
+
+    def delFirst(self):
+        self.head = self.head.next
+
+
 class InterManager:
     def __init__(self):
-        self.table = dict()
+        self.ent_table = dict()
+        self.dec_table = dict()
         self.circle = Circle(0, 0, 360)
+        self.time_ = 0
+        self.update_container = dict()
+        self.k = 2
 
-    def make_table(self, objects):
-        for obj in objects:
-            self.table[obj] = list()
+    def make_decorations_table(self, entities, decorations):
+        for ent in entities:
+            self.dec_table[ent] = LinkedList()
 
-        for i in range(len(objects)):
-            position = objects[i].position
+        for entity in entities:
+            collision_rect = entity.get_collision_rect()
+            for decoration in decorations:
+                decoration_collision_rect = decoration.get_collision_rect()
+                distance = collision_rect.v2_distance2d(decoration_collision_rect)
+                speed = entity.speed * self.k
+                value = (distance/100) / speed
+                self.dec_table[entity].addSorted(decoration, value)
+
+    def make_entities_table(self, entities):
+        for ent in entities:
+            self.ent_table[ent] = list()
+
+        for i in range(len(entities)):
+            position = entities[i].position
             self.circle.x = position.x
             self.circle.y = position.y
-            for j in range(i+1, len(objects)):
-                obj_position = objects[j].position
-                if self.circle.intersects(obj_position.x, obj_position.y):
-                    self.table[objects[i]].append(objects[j])
-                    self.table[objects[j]].append(objects[i])
+            for j in range(i+1, len(entities)):
+                ent_position = entities[j].position
+                if self.circle.intersects(ent_position.x, ent_position.y):
+                    self.ent_table[entities[i]].append(entities[j])
+                    self.ent_table[entities[j]].append(entities[i])
 
+    def tick(self, time_):
+        self.time_ += time_
+
+    def get_decorations_around(self, entity):
+        decorations_around = list()
+        node = self.dec_table[entity].head
+        while node:
+            if node.value <= self.time_:
+                print('ooo eh')
+                decorations_around.append(node.decoration)
+                self.dec_table[entity].delFirst()
+                node = node.next
+            else:
+                break
+        self.update_container[entity] = list(decorations_around)
+        return decorations_around
+
+    def update(self):
+        print([i.head.value for i in self.dec_table.values()])
+        for entity in self.update_container.keys():
+            collision_rect = entity.get_collision_rect()
+            for decoration in self.update_container[entity]:
+                decoration_collision_rect = decoration.get_collision_rect()
+                distance = collision_rect.v2_distance2d(decoration_collision_rect)
+                speed = entity.speed * self.k
+                value = self.time_ + (distance / 100) / speed
+                self.dec_table[entity].addSorted(decoration, value)
+            del self.update_container[entity]

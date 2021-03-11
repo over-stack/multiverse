@@ -12,5 +12,5 @@ class Camera:
         self.frame.move_to(center.x, center.y, isCenter=True)
 
     def get_scroll(self):
-        return Vector2D(-self.frame.center.x + self.frame.width,
-                        -self.frame.center.y + self.frame.height)
+        return Vector2D(-self.frame.center.x + self.frame.width/2,
+                        -self.frame.center.y + self.frame.height/2)

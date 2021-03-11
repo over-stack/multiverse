@@ -1,10 +1,11 @@
 import numpy as np
+import math
 import random
 import pygame
 
 from object import Object
 #from debug_object import DebugObject
-from my_libs import Rect, Vector2D
+from my_libs import Rect, Vector2D, LinkedList
 import GUI
 from genome import Genome
 from copy import deepcopy
@@ -47,7 +48,7 @@ class Entity(Object):
 
         self.priorities = dict()
 
-        self.genome_layers = [9, 30, 40, 30, 5]
+        self.genome_layers = [8, 30, 50, 30, 5]
         self.genome = Genome(layers=self.genome_layers)
 
         self.feature = None  ####################
@@ -56,6 +57,17 @@ class Entity(Object):
         self.write_features = True
 
         self.ai_custom = False
+
+        self.items_to_pick = set()
+        self.one_action = False
+
+        self.debug_mode = False
+        self.text_d = GUI.Text('d')
+        self.text_w = GUI.Text('w')
+        self.text_a = GUI.Text('a')
+        self.text_s = GUI.Text('s')
+        self.text_e = GUI.Text('e')
+        self.draw_letter = None
 
         #self.debug_object = DebugObject()
 
@@ -71,10 +83,10 @@ class Entity(Object):
         for i in range(len(env_states)):
             self.priorities[env_states[i]] = nums[i]
 
-    def control(self, time_, entities_around, decorations_around, keys=list(), pass_=False):
+    def control(self, time_, entities_around, decorations_around, items_around, keys=list(), pass_=False):
         #start = time.monotonic()
         if not pass_:
-            self.features = self.encode_features(entities_around, decorations_around)
+            self.features = self.encode_features2(entities_around, decorations_around, items_around)
         #end = time.monotonic()
         if self.ai:
             '''
@@ -136,8 +148,10 @@ class Entity(Object):
                 x = self.genome.evaluate(self.features)
                 keys = self.decode_features(x)
 
+        if not self.ai and self.debug_mode:
+            print(self.encode_features2(entities_around, decorations_around, items_around))
 
-        objects_around = entities_around + decorations_around
+        objects_around = entities_around + decorations_around + items_around
         start = time.monotonic()
 
         if self.state != 'death':
@@ -149,11 +163,11 @@ class Entity(Object):
         self.interaction(objects_around)
         end = time.monotonic()
 
-
         return end-start
 
     def keys_pressed(self, keys, time):
         if keys[pygame.K_d]:
+            self.draw_letter = self.text_d
             if not self.busy:
                 self.acceleration.x = self.speed * time
                 self.state = 'walk'
@@ -161,6 +175,7 @@ class Entity(Object):
                 self.animanager.flip(False)
 
         if keys[pygame.K_a]:
+            self.draw_letter = self.text_a
             if not self.busy:
                 self.acceleration.x = -self.speed * time
                 self.state = 'walk'
@@ -168,11 +183,13 @@ class Entity(Object):
                 self.animanager.flip(True)
 
         if keys[pygame.K_w]:
+            self.draw_letter = self.text_w
             if not self.busy:
                 self.acceleration.y = -self.speed * time
                 self.state = 'walk'
 
         if keys[pygame.K_s]:
+            self.draw_letter = self.text_s
             if not self.busy:
                 self.acceleration.y = self.speed * time
                 self.state = 'walk'
@@ -188,6 +205,23 @@ class Entity(Object):
                 self.state = 'attack'
                 self.busy = True
                 self.request = True
+
+        if keys[pygame.K_e]:
+            self.draw_letter = self.text_e
+            if not self.busy:
+                #if not self.one_action:
+                    #self.one_action = True
+                if len(self.items_to_pick):
+                    self.items_to_pick.pop().pick(self)
+                    self.score += 100
+
+        if keys[pygame.K_o]:
+            if not self.debug_mode:
+                self.debug_mode = True
+
+        if keys[pygame.K_p]:
+            if self.debug_mode:
+                self.debug_mode = False
         '''
         if keys[pygame.K_KP4] and self.write_features:
             print(f'health = {self.feature[0]}')
@@ -277,18 +311,26 @@ class Entity(Object):
                 self.state = 'stay'
 
         if not keys[pygame.K_a]:
+            if self.draw_letter == self.text_a:
+                self.draw_letter = None
             if self.acceleration.x < 0:
                 self.acceleration.x = 0
 
         if not keys[pygame.K_d]:
+            if self.draw_letter == self.text_d:
+                self.draw_letter = None
             if self.acceleration.x > 0:
                 self.acceleration.x = 0
 
         if not keys[pygame.K_w]:
+            if self.draw_letter == self.text_w:
+                self.draw_letter = None
             if self.acceleration.y < 0:
                 self.acceleration.y = 0
 
         if not keys[pygame.K_s]:
+            if self.draw_letter == self.text_s:
+                self.draw_letter = None
             if self.acceleration.y > 0:
                 self.acceleration.y = 0
 
@@ -297,6 +339,12 @@ class Entity(Object):
                 self.animanager.play()
                 self.state = 'stay'
                 self.busy = False
+
+        if not keys[pygame.K_e]:
+            if self.draw_letter == self.text_e:
+                self.draw_letter = None
+            if self.one_action:
+                self.one_action = False
         ''''
         if not keys[pygame.K_KP4] and not keys[pygame.K_KP6] and not keys[pygame.K_KP8] \
             and not keys[pygame.K_KP2] and not keys[pygame.K_KP5]:
@@ -320,8 +368,10 @@ class Entity(Object):
                                     self.attack_range.x, self.attack_range.y, isCenter=True)
         '''
 
+        self.items_to_pick.clear()
+
         collision_rect = self.get_collision_rect()
-        next_collision_rect = self.get_collision_rect()
+        next_collision_rect = self.get_collision_rect().copy()
         next_collision_rect.move(acceleration.x, acceleration.y)
 
         if not self.isCollision:
@@ -329,6 +379,11 @@ class Entity(Object):
 
         for object_ in objects:
             if not object_.isCollision:
+                if object_.container == 'items':
+                    object_collision_rect = object_.get_collision_rect()
+                    if next_collision_rect.intersects(object_collision_rect):
+                        if object_ not in self.items_to_pick:
+                            self.items_to_pick.add(object_)
                 continue
             if not self.friendly_collision and object_.family in self.friends:
                 continue
@@ -337,11 +392,14 @@ class Entity(Object):
                 continue
 
             next_collision_rect.move(0, -self.acceleration.y)
+
             if next_collision_rect.intersects(object_collision_rect):
                 if acceleration.x > 0:
                     acceleration.x = object_collision_rect.left - collision_rect.right
+
                 elif acceleration.x < 0:
                     acceleration.x = object_collision_rect.right - collision_rect.left
+
                 collision_rect.move(acceleration.x, 0)
                 next_collision_rect.move_to(collision_rect.center.x, collision_rect.center.y, isCenter=True)
 
@@ -366,7 +424,6 @@ class Entity(Object):
                         self.health += (self.regeneration_speed + self.regeneration_speed_bonus)
                         self.score += 1000
             '''
-
         self.position += acceleration
 
     def interaction(self, objects_around):
@@ -392,14 +449,12 @@ class Entity(Object):
                     if obj.container == 'entities' and not obj.immortal:
                             #self.satiety += 100  # vampire
                             self.health += (self.regeneration_speed + self.regeneration_speed_bonus)
-                            self.score += 1000
+                            #self.score += 1000
 
         self.request = False
 
     def update(self, time):
         Object.update(self, time)
-
-        self.score += time  #######################
 
         if self.satiety > 0:
             self.satiety -= self.satiety_speed * time
@@ -418,8 +473,10 @@ class Entity(Object):
         Object.draw(self, surface, cam_frame)
         if not self.visible:
             return
+        rect = self.get_collision_rect()
         self.satiety_bar.draw(surface, self.satiety, self.max_satiety, self.satiety_bonus, self.position, cam_frame)
-
+        if self.draw_letter:
+            surface.blit(self.draw_letter.text_rendered, (self.position.x + cam_frame.x, self.position.y + cam_frame.y))
         #self.debug_object.draw(surface, cam_frame)
         #self.debug_object.erase()
 
@@ -428,6 +485,30 @@ class Entity(Object):
         dc.id_ = id(dc)
         dc.genome = Genome(self.genome_layers)
         return dc
+
+    def encode_features2(self, entities_around, decorations_around, items_around):
+        n = 8
+        food_neurons_distance = [0] * n
+
+        for item in items_around:
+            rect = item.get_rect()
+            a = np.arctan2(rect.center.y - self.position.y, rect.center.x - self.position.x)
+            a += np.pi / n  # pi / 4
+            if a < 0:
+                a += 2 * np.pi
+            ind = int(math.floor(a / (2 * np.pi / n)))
+            distance = np.sqrt((self.position.x - rect.center.x) ** 2 + (self.position.y - rect.center.y) ** 2)
+            distance = max(distance, 0.001)
+            distance = 40 / distance
+            distance = min(distance, 1)
+            #distance = distance ** 2
+            if food_neurons_distance[ind] < distance:
+                food_neurons_distance[ind] = distance
+
+        return food_neurons_distance
+
+        #print(food_neurons_class)
+        #print(food_neurons_distance)
 
     def encode_features(self, entities_around, decorations_around):
         health = min(self.health / (self.max_health + self.health_bonus), 1)
@@ -493,15 +574,15 @@ class Entity(Object):
         button = ' '
         m = np.argmax(x)
         if m == 0:
-            button = 'a'
-        elif m == 1:
             button = 'd'
-        elif m == 2:
-            button = 'w'
-        elif m == 3:
+        elif m == 1:
             button = 's'
+        elif m == 2:
+            button = 'a'
+        elif m == 3:
+            button = 'w'
         elif m == 4:
-            button = ' '
+            button = 'e'
 
         keys = [0 for i in range(COUNT_OF_BUTTONS)]
         keys[ord(button)] = 1

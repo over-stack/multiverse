@@ -7,14 +7,14 @@ from my_libs import Rect, Vector2D
 
 
 class AnimationManager:
-    def __init__(self, defaultFlipped=False):
+    def __init__(self, collision_rect=Rect(0, 0, 40, 16), defaultFlipped=False):
         self.animations = dict()
         self.currentAnimation = ''
         self.lastAnimation = ''
         self.flipped = False
         self.defaultFlipped = defaultFlipped
         self.simple_drawing = False
-        self.collision_rect = Rect(0, 0, 40, 16)
+        self.collision_rect = collision_rect
 
     def create(self, name, sheet, cols, rows, count, speed, looped=False):
         self.animations[name] = Animation(sheet, cols, rows, count, speed, looped)
@@ -80,3 +80,4 @@ class AnimationManager:
 
     def copy(self):
         return deepcopy(self)
+

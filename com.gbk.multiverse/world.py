@@ -37,6 +37,7 @@ class World:
         self.add_tile(name='dirt7', position=Vector2D(240, 400))
         self.add_tile(name='dirt8', position=Vector2D(208, 432))
         self.add_tile(name='dirt9', position=Vector2D(240, 432))
+        self.add_tile(name='fence', position=Vector2D(0, 0))
 
     def generate_world(self):
         map_ = [[self.encoder['dirt'] for _ in range(self.size_in_tiles.x)] for _ in range(self.size_in_tiles.y)]
@@ -96,8 +97,8 @@ class World:
         rect.top = min([rect.top, self.size_in_tiles.y])
         rect.bottom = min([rect.bottom, self.size_in_tiles.y])
 
-    def get_area(self):
-        return Rect(0, 0, self.size.x, self.size.y)
+    def get_area(self, shift=0):
+        return Rect(shift, shift, self.size.x - 2 * shift, self.size.y - 2 * shift)
 
     def get_codes(self):
         return list(self.decoder.keys())

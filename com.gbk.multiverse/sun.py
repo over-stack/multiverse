@@ -1,6 +1,8 @@
 import pygame
 
 import time
+import numpy as np
+from genome import Genome
 
 class Sun:
     def __init__(self, cam_width, cam_height):
@@ -44,3 +46,12 @@ class Sun:
             self.img.fill(current_color)
 
             self.img.set_alpha(255 - self.brightness)
+
+
+if __name__ == '__main__':
+    g = Genome([4, 10, 20, 10, 5])
+    g.load('0.npy')
+    #for layer in g.network:
+        #print(layer.size)
+        #print(layer)
+    print(g.network)

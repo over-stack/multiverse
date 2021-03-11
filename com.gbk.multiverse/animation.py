@@ -16,8 +16,6 @@ class Animation:
         self.rect = self.sheet.get_rect()
         self.width = self.rect.width / cols
         self.height = self.rect.height / rows
-        self.depth = self.height / 2 # axis z
-        self.shift = self.width / 4  # width shift
         self.center = Vector2D(self.width // 2, self.height // 2)
 
         self.frames = [Rect(index % cols * self.width, index // cols * self.height, self.width, self.height)

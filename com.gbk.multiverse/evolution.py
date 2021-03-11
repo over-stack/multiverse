@@ -13,7 +13,7 @@ class EvolutionExample:
         self.shift = Vector2D(0, 0)
         self.spawning = True
         self.start = time.monotonic()
-        self.duration = 30
+        self.duration = 10
         self.epoch = 0
         self.current_population = 0
         self.mutation_prob = 0.1
@@ -67,13 +67,17 @@ class Evolution:
                 entities.sort(key=lambda x: x.score, reverse=True)
                 probabilities = list()
                 score_sum_ = 0
-                #print(example_name)
-                #print('Epoch:', example.epoch)
+                print(example_name)
+                print('Epoch:', example.epoch)
                 for ent in entities:
                     probabilities.append(ent.score)
                     score_sum_ += ent.score
-                    #print(ent.score, end=' ')
-                #print('\n////////////', score_sum_, '/////////////////')
+                    print(ent.score, end=' ')
+                print('\n////////////', score_sum_, '/////////////////')
+
+                if example.epoch % 50 == 0:
+                    for i in range(len(entities)):
+                        entities[i].genome.save('2_' + str(i) + '.npy')
 
                 probabilities = [p / score_sum_ for p in probabilities]
                 pool = np.random.choice(entities, example.max_, p=probabilities)
@@ -98,10 +102,10 @@ class Evolution:
                     else:
                         genome.network[nlayer][i, j] = ent2.genome.network[nlayer][i, j]
                     if np.random.uniform(0, 1) < mutation_prob:
-                        genome.network[nlayer][i, j] += np.random.uniform(-1, 1) * 100
+                        genome.network[nlayer][i, j] += np.random.uniform(-1, 1) * 10  # * koef
                     count += 1
         return genome
 
     def archive(self, family):
         if family in self.examples.keys():
-                self.examples[family].current_population -= 1
+            self.examples[family].current_population -= 1

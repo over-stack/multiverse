@@ -15,11 +15,16 @@ class List:
     def __init__(self):
         pass
 
+
 class Text:
-    def __int__(self, text, font, color=(0, 0, 0)):
-        self.font = font
+    def __init__(self, text):
         self.text = text
-        self.text_rendered = font.render(text, False, (0, 0, 0))
+        font = pygame.font.Font(None, 30)
+        self.text_rendered = font.render(text, False, (255, 0, 0))
+
+    def __deepcopy__(self, memo):  # makes copy without copying sheet
+        return Text(self.text)
+
 
 class Layer:
     def __init__(self, position, size, color):
@@ -52,6 +57,7 @@ class Layer:
         self.position.y += delta.y
         for bar in self.bars:
             bar.move(delta)
+
 
 class Window(Layer):
     def __init__(self, position, size, color):
@@ -111,6 +117,7 @@ class Window(Layer):
 
                 surface.blit(self.shadow, (self.position.x, self.position.y))
                 self.subwindow.draw(surface)
+
 
 class Button:
     def __init__(self, position, size, color, action, font=None, text_before='', text_after=''):

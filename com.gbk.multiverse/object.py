@@ -42,6 +42,7 @@ class Object:
         self.alive = True
         self.visible = True
         self.immortal = False
+        self.draw_bars = True
 
         self.score = 1
 
@@ -68,9 +69,15 @@ class Object:
     def draw(self, surface, cam_scroll):
         if not self.visible:
             return
+
+        rect = self.get_collision_rect()
+        pygame.draw.rect(surface, (0, 255, 0),
+                         (rect.left + cam_scroll.x, rect.top + cam_scroll.y, rect.width, rect.height))
         self.animanager.draw(surface, self.get_rect().topleft, cam_scroll)
-        self.health_bar.draw(surface, self.health, self.max_health, self.health_bonus,
-                             self.get_rect().center, cam_scroll)
+
+        if self.draw_bars:
+            self.health_bar.draw(surface, self.health, self.max_health, self.health_bonus,
+                                 self.get_rect().center, cam_scroll)
 
     def get_rect(self, toDraw=True): #get_draw_rect
         #if toDraw:
@@ -85,7 +92,7 @@ class Object:
         #return Rect(self.position.x + animation.shift, self.position.y - animation.depth,
                     #animation.width - 2 * animation.shift, animation.depth, isCenter=True)
         rect = self.animanager.get_collision_rect()
-        rect.move_to(self.position.x, self.position.y)
+        rect.move_to(self.position.x, self.position.y, isCenter=True)
         return rect
 
     def copy(self):

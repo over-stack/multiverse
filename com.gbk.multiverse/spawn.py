@@ -23,12 +23,19 @@ class Spawn:  # spawns only copy of object
         self.containers = containers
         self.examples = dict()
 
-    def spawn(self, obj, return_obj=False):
+    def spawn(self, obj, return_obj=False, position=Vector2D(0, 0)):
         new_obj = obj.copy()
+        if not position.is_null():
+            new_obj.position = position.copy()
         self.containers[obj.container].append(new_obj)
 
         if return_obj:
             return new_obj
+
+    def safe_spawn(self, obj, return_obj=False, position=Vector2D(0, 0)):
+        if obj.family in self.examples.keys():
+            self.examples[obj.family].count += 1
+        self.spawn(obj, return_obj, position)
 
     def spawn_random(self, count, area, obj, shift=Vector2D(0, 0), return_obj=False):
         objects = list()
@@ -42,6 +49,7 @@ class Spawn:  # spawns only copy of object
         if return_obj:
             return objects
 
+    #def spawn_line(self, rect, obj, shift=Vector2D(0, 0), edges=True, return_obj=False):
     def spawn_rect(self, rect, obj, shift=Vector2D(0, 0), edges=True, return_obj=False):
         collision_rect = obj.get_collision_rect()
 
@@ -76,8 +84,11 @@ class Spawn:  # spawns only copy of object
 
         for container_name in self.containers:
             for obj in self.containers[container_name]:
-                if new_rect.intersects(obj.get_collision_rect()):
-                    return self.define_new_position(rect, area, shift)
+                if new_rect.intersects(obj.get_collision_rect()) and obj.isCollision:
+                    #try:
+                        #return self.define_new_position(rect, area, shift)
+                    #finally:
+                    return new_position
         return new_position
 
     # removes 1 object and check if it is involved in periodic spawn
@@ -90,9 +101,13 @@ class Spawn:  # spawns only copy of object
         self.containers[obj.container].remove(obj)
 
     def remove_family(self, container_name, family):
+        trash = list()
         for obj in self.containers[container_name]:
             if obj.family == family:
-                self.remove(obj)
+                trash.append(obj)
+        for obj in trash:
+            self.remove(obj)
+        del trash
 
     def add_example(self, example):
         self.examples[example.object_.family] = example
