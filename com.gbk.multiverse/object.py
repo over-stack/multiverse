@@ -70,9 +70,9 @@ class Object:
         if not self.visible:
             return
 
-        rect = self.get_collision_rect()
+        '''rect = self.get_collision_rect()
         pygame.draw.rect(surface, (0, 255, 0),
-                         (rect.left + cam_scroll.x, rect.top + cam_scroll.y, rect.width, rect.height))
+                         (rect.left + cam_scroll.x, rect.top + cam_scroll.y, rect.width, rect.height))'''
         self.animanager.draw(surface, self.get_rect().topleft, cam_scroll)
 
         if self.draw_bars:

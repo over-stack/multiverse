@@ -145,13 +145,13 @@ class Game:
         self.sheets['monument'] = dict()
         self.sheets['monument']['stay'] = pygame.transform.scale2x(pygame.image.load(f'{self.resources["tiny-rpg"]}/sliced-objects/rock-monument.png').convert_alpha())
 
-        self.sheets['fence_v'] = dict()
+        '''self.sheets['fence_v'] = dict()
         self.sheets['fence_v']['stay'] = pygame.transform.scale2x(
-            pygame.image.load(f'{self.resources["tiny-rpg"]}/fence_v.png').convert_alpha())
+            pygame.image.load(f'{self.resources["tiny-rpg"]}/fence_v.png').convert_alpha())'''
 
-        self.sheets['fence_hl'] = dict()
+        '''self.sheets['fence_hl'] = dict()
         self.sheets['fence_hl']['stay'] = pygame.transform.scale2x(
-            pygame.image.load(f'{self.resources["tiny-rpg"]}/fence_hl.png').convert_alpha())
+            pygame.image.load(f'{self.resources["tiny-rpg"]}/fence_hl.png').convert_alpha())'''
 
         self.sheets['hero'] = dict()
         self.sheets['hero']['stay'] = pygame.transform.scale2x(pygame.image.load(
@@ -199,13 +199,13 @@ class Game:
         self.animanagers['tree-dried'].create(name='stay', sheet=self.sheets['tree-dried']['stay'],
                                         cols=1, rows=1, count=1, speed=0)
 
-        self.animanagers['fence_v'] = AnimationManager(collision_rect=Rect(0, 0, 120, 42))
+        '''self.animanagers['fence_v'] = AnimationManager(collision_rect=Rect(0, 0, 120, 42))
         self.animanagers['fence_v'].create(name='stay', sheet=self.sheets['fence_v']['stay'],
                                               cols=1, rows=1, count=1, speed=0)
 
         self.animanagers['fence_hl'] = AnimationManager(collision_rect=Rect(0, 0, 42, 120))
         self.animanagers['fence_hl'].create(name='stay', sheet=self.sheets['fence_hl']['stay'],
-                                           cols=1, rows=1, count=1, speed=0)
+                                           cols=1, rows=1, count=1, speed=0)'''
 
         self.animanagers['monument'] = AnimationManager()
         self.animanagers['monument'].create(name='stay', sheet=self.sheets['monument']['stay'],
@@ -254,9 +254,9 @@ class Game:
         hero.strength = 30
         hero.position = Vector2D(300, 300)
         hero.alive = True
-        hero.friends.append('ghost')
+        #hero.friends.append('ghost')
         hero.friendly_collision = False
-        #hero.isCollision = True
+        hero.isCollision = True
         #hero.satiety_speed = 0
         #hero.friends.append('hell-beast')
         #hero.make_ghost()
@@ -286,13 +286,13 @@ class Game:
         monument = Decoration(animanager=self.animanagers['monument'], max_health=5000, family='monument')
         self.examples['monument'] = monument
 
-        fence_v = Decoration(animanager=self.animanagers['fence_v'], max_health=5000, family='fence')
+        '''fence_v = Decoration(animanager=self.animanagers['fence_v'], max_health=5000, family='fence')
         fence_v.immortal = True
         self.examples['fence_v'] = fence_v
 
         fence_hl = Decoration(animanager=self.animanagers['fence_hl'], max_health=5000, family='fence')
         fence_hl.immortal = True
-        self.examples['fence_hl'] = fence_hl
+        self.examples['fence_hl'] = fence_hl'''
 
         dog = Entity(animanager=self.animanagers['dog'], speed=-12, max_health=80, strength=14,
                      vision_area=Vector2D(self.cam.frame.width, self.cam.frame.height), family='dog')
